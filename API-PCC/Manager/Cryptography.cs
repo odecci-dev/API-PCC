@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace GoldOneAPI.Manager
+namespace API_PCC.Manager
 {
     public class Cryptography
     {

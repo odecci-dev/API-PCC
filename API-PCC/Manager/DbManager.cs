@@ -2,7 +2,7 @@
 using System.Data.SqlClient;
 using System.Text.Json;
 
-namespace GoldOneAPI.Manager
+namespace API_PCC.Manager
 {
     public class DbManager
     {

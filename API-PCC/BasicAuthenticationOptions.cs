@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 
-namespace GoldOneAPI
+namespace API_PCC
 {
     internal class BasicAuthenticationOptions : AuthenticationSchemeOptions
     {

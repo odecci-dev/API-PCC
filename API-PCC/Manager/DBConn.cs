@@ -1,4 +1,4 @@
-﻿namespace GoldOneAPI.Manager
+﻿namespace API_PCC.Manager
 {
     public class DBConn
     {

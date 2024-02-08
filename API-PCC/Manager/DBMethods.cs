@@ -4,7 +4,7 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Text;
 
-namespace GoldOneAPI.Manager
+namespace API_PCC.Manager
 {
     public class DBMethods
     {

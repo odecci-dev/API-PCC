@@ -1,4 +1,4 @@
-﻿using GoldOneAPI.Manager;
+﻿using API_PCC.Manager;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Data;
@@ -6,7 +6,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-namespace GoldOneAPI
+namespace API_PCC
 {
     internal class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
     {
