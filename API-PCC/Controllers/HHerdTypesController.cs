@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using API_PCC.Data;
 using API_PCC.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authorization;
 
 namespace API_PCC.Controllers
 {
+    [Authorize("ApiKey")]
     [Route("api/[controller]")]
     [ApiController]
     public class HHerdTypesController : ControllerBase
