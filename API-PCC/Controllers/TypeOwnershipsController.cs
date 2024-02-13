@@ -9,20 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class ATypeOwnershipsController : ControllerBase
+    public class TypeOwnershipsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public ATypeOwnershipsController(PCC_DEVContext context)
+        public TypeOwnershipsController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/ATypeOwnerships
+        // GET: TypeOwnerships/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ATypeOwnership>>> GetATypeOwnerships()
+        public async Task<ActionResult<IEnumerable<ATypeOwnership>>> list()
         {
           if (_context.ATypeOwnerships == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.ATypeOwnerships.ToListAsync();
         }
 
-        // GET: api/ATypeOwnerships/5
+        // GET: TypeOwnerships/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ATypeOwnership>> GetATypeOwnership(int id)
+        public async Task<ActionResult<ATypeOwnership>> update(int id)
         {
           if (_context.ATypeOwnerships == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return aTypeOwnership;
         }
 
-        // PUT: api/ATypeOwnerships/5
+        // PUT: TypeOwnerships/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutATypeOwnership(int id, ATypeOwnership aTypeOwnership)
+        public async Task<IActionResult> update(int id, ATypeOwnership aTypeOwnership)
         {
             if (id != aTypeOwnership.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/ATypeOwnerships
+        // POST: TypeOwnerships/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<ATypeOwnership>> PostATypeOwnership(ATypeOwnership aTypeOwnership)
+        public async Task<ActionResult<ATypeOwnership>> save(ATypeOwnership aTypeOwnership)
         {
           if (_context.ATypeOwnerships == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.ATypeOwnerships.Add(aTypeOwnership);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetATypeOwnership", new { id = aTypeOwnership.Id }, aTypeOwnership);
+            return CreatedAtAction("save", new { id = aTypeOwnership.Id }, aTypeOwnership);
         }
 
-        // DELETE: api/ATypeOwnerships/5
+        // DELETE: TypeOwnerships/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteATypeOwnership(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.ATypeOwnerships == null)
             {

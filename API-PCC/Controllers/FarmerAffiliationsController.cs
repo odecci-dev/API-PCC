@@ -9,20 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class HFarmerAffiliationsController : ControllerBase
+    public class FarmerAffiliationsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public HFarmerAffiliationsController(PCC_DEVContext context)
+        public FarmerAffiliationsController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/HFarmerAffiliations
+        // GET: FarmerAffiliations/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HFarmerAffiliation>>> GetHFarmerAffiliations()
+        public async Task<ActionResult<IEnumerable<HFarmerAffiliation>>> list()
         {
           if (_context.HFarmerAffiliations == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.HFarmerAffiliations.ToListAsync();
         }
 
-        // GET: api/HFarmerAffiliations/5
+        // GET: FarmerAffiliations/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<HFarmerAffiliation>> GetHFarmerAffiliation(int id)
+        public async Task<ActionResult<HFarmerAffiliation>> search(int id)
         {
           if (_context.HFarmerAffiliations == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return hFarmerAffiliation;
         }
 
-        // PUT: api/HFarmerAffiliations/5
+        // PUT: FarmerAffiliations/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHFarmerAffiliation(int id, HFarmerAffiliation hFarmerAffiliation)
+        public async Task<IActionResult> update(int id, HFarmerAffiliation hFarmerAffiliation)
         {
             if (id != hFarmerAffiliation.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/HFarmerAffiliations
+        // POST: FarmerAffiliations/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<HFarmerAffiliation>> PostHFarmerAffiliation(HFarmerAffiliation hFarmerAffiliation)
+        public async Task<ActionResult<HFarmerAffiliation>> save(HFarmerAffiliation hFarmerAffiliation)
         {
           if (_context.HFarmerAffiliations == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.HFarmerAffiliations.Add(hFarmerAffiliation);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetHFarmerAffiliation", new { id = hFarmerAffiliation.Id }, hFarmerAffiliation);
+            return CreatedAtAction("save", new { id = hFarmerAffiliation.Id }, hFarmerAffiliation);
         }
 
-        // DELETE: api/HFarmerAffiliations/5
+        // DELETE: FarmerAffiliations/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHFarmerAffiliation(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.HFarmerAffiliations == null)
             {

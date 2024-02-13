@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
     public class HBuffHerdsController : ControllerBase
     {
@@ -20,9 +20,9 @@ namespace API_PCC.Controllers
             _context = context;
         }
 
-        // GET: api/HBuffHerds
+        // GET: BuffHerds/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HBuffHerd>>> GetHBuffHerds()
+        public async Task<ActionResult<IEnumerable<HBuffHerd>>> list()
         {
           if (_context.HBuffHerds == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.HBuffHerds.ToListAsync();
         }
 
-        // GET: api/HBuffHerds/5
+        // GET: BuffHerds/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<HBuffHerd>> GetHBuffHerd(int id)
+        public async Task<ActionResult<HBuffHerd>> search(int id)
         {
           if (_context.HBuffHerds == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return hBuffHerd;
         }
 
-        // PUT: api/HBuffHerds/5
+        // PUT: BuffHerds/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHBuffHerd(int id, HBuffHerd hBuffHerd)
+        public async Task<IActionResult> update(int id, HBuffHerd hBuffHerd)
         {
             if (id != hBuffHerd.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/HBuffHerds
+        // POST: BuffHerds/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<HBuffHerd>> PostHBuffHerd(HBuffHerd hBuffHerd)
+        public async Task<ActionResult<HBuffHerd>> save(HBuffHerd hBuffHerd)
         {
           if (_context.HBuffHerds == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.HBuffHerds.Add(hBuffHerd);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetHBuffHerd", new { id = hBuffHerd.Id }, hBuffHerd);
+            return CreatedAtAction("save", new { id = hBuffHerd.Id }, hBuffHerd);
         }
 
-        // DELETE: api/HBuffHerds/5
+        // DELETE: BuffHerds/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHBuffHerd(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.HBuffHerds == null)
             {

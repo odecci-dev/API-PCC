@@ -9,20 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class ABuffAnimalsController : ControllerBase
+    public class BuffAnimalsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public ABuffAnimalsController(PCC_DEVContext context)
+        public BuffAnimalsController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/ABuffAnimals
+        // GET: BuffAnimals/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ABuffAnimal>>> GetABuffAnimals()
+        public async Task<ActionResult<IEnumerable<ABuffAnimal>>> list()
         {
           if (_context.ABuffAnimals == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.ABuffAnimals.ToListAsync();
         }
 
-        // GET: api/ABuffAnimals/5
+        // GET: BuffAnimals/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ABuffAnimal>> GetABuffAnimal(int id)
+        public async Task<ActionResult<ABuffAnimal>> search(int id)
         {
           if (_context.ABuffAnimals == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return aBuffAnimal;
         }
 
-        // PUT: api/ABuffAnimals/5
+        // PUT: BuffAnimals/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutABuffAnimal(int id, ABuffAnimal aBuffAnimal)
+        public async Task<IActionResult> update(int id, ABuffAnimal aBuffAnimal)
         {
             if (id != aBuffAnimal.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/ABuffAnimals
+        // POST: BuffAnimals/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<ABuffAnimal>> PostABuffAnimal(ABuffAnimal aBuffAnimal)
+        public async Task<ActionResult<ABuffAnimal>> save(ABuffAnimal aBuffAnimal)
         {
           if (_context.ABuffAnimals == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.ABuffAnimals.Add(aBuffAnimal);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetABuffAnimal", new { id = aBuffAnimal.Id }, aBuffAnimal);
+            return CreatedAtAction("save", new { id = aBuffAnimal.Id }, aBuffAnimal);
         }
 
-        // DELETE: api/ABuffAnimals/5
+        // DELETE: BuffAnimals/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteABuffAnimal(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.ABuffAnimals == null)
             {
