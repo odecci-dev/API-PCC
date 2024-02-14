@@ -36,6 +36,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[Action_tbl]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[H_Buff_Herd]",
          "ObjectType": 0
       },
@@ -53,6 +57,18 @@
       },
       {
          "Name": "[dbo].[H_Herd_Type]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Module_tbl]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_ApiTokenModel]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_UsersModel]",
          "ObjectType": 0
       }
    ],
