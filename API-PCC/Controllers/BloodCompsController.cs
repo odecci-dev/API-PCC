@@ -9,57 +9,57 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class ABreedsController : ControllerBase
+    public class BloodCompsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public ABreedsController(PCC_DEVContext context)
+        public BloodCompsController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/ABreeds
+        // GET: BloodComps/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ABreed>>> GetABreeds()
+        public async Task<ActionResult<IEnumerable<ABloodComp>>> list()
         {
-          if (_context.ABreeds == null)
+          if (_context.ABloodComps == null)
           {
               return NotFound();
           }
-            return await _context.ABreeds.ToListAsync();
+            return await _context.ABloodComps.ToListAsync();
         }
 
-        // GET: api/ABreeds/5
+        // GET: BloodComps/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ABreed>> GetABreed(int id)
+        public async Task<ActionResult<ABloodComp>> search(int id)
         {
-          if (_context.ABreeds == null)
+          if (_context.ABloodComps == null)
           {
               return NotFound();
           }
-            var aBreed = await _context.ABreeds.FindAsync(id);
+            var aBloodComp = await _context.ABloodComps.FindAsync(id);
 
-            if (aBreed == null)
+            if (aBloodComp == null)
             {
                 return NotFound();
             }
 
-            return aBreed;
+            return aBloodComp;
         }
 
-        // PUT: api/ABreeds/5
+        // PUT: BloodComps/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutABreed(int id, ABreed aBreed)
+        public async Task<IActionResult> update(int id, ABloodComp aBloodComp)
         {
-            if (id != aBreed.Id)
+            if (id != aBloodComp.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(aBreed).State = EntityState.Modified;
+            _context.Entry(aBloodComp).State = EntityState.Modified;
 
             try
             {
@@ -67,7 +67,7 @@ namespace API_PCC.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ABreedExists(id))
+                if (!ABloodCompExists(id))
                 {
                     return NotFound();
                 }
@@ -80,44 +80,44 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/ABreeds
+        // POST: BloodComps/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<ABreed>> PostABreed(ABreed aBreed)
+        public async Task<ActionResult<ABloodComp>> save(ABloodComp aBloodComp)
         {
-          if (_context.ABreeds == null)
+          if (_context.ABloodComps == null)
           {
-              return Problem("Entity set 'PCC_DEVContext.ABreeds'  is null.");
+              return Problem("Entity set 'PCC_DEVContext.ABloodComps'  is null.");
           }
-            _context.ABreeds.Add(aBreed);
+            _context.ABloodComps.Add(aBloodComp);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetABreed", new { id = aBreed.Id }, aBreed);
+            return CreatedAtAction("save", new { id = aBloodComp.Id }, aBloodComp);
         }
 
-        // DELETE: api/ABreeds/5
+        // DELETE: BloodComps/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteABreed(int id)
+        public async Task<IActionResult> delete(int id)
         {
-            if (_context.ABreeds == null)
+            if (_context.ABloodComps == null)
             {
                 return NotFound();
             }
-            var aBreed = await _context.ABreeds.FindAsync(id);
-            if (aBreed == null)
+            var aBloodComp = await _context.ABloodComps.FindAsync(id);
+            if (aBloodComp == null)
             {
                 return NotFound();
             }
 
-            _context.ABreeds.Remove(aBreed);
+            _context.ABloodComps.Remove(aBloodComp);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool ABreedExists(int id)
+        private bool ABloodCompExists(int id)
         {
-            return (_context.ABreeds?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.ABloodComps?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

@@ -9,20 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class ABirthTypesController : ControllerBase
+    public class BirthTypesController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public ABirthTypesController(PCC_DEVContext context)
+        public BirthTypesController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/ABirthTypes
+        // GET: BirthTypes/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ABirthType>>> GetABirthTypes()
+        public async Task<ActionResult<IEnumerable<ABirthType>>> list()
         {
           if (_context.ABirthTypes == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.ABirthTypes.ToListAsync();
         }
 
-        // GET: api/ABirthTypes/5
+        // GET: BirthTypes/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ABirthType>> GetABirthType(int id)
+        public async Task<ActionResult<ABirthType>> search(int id)
         {
           if (_context.ABirthTypes == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return aBirthType;
         }
 
-        // PUT: api/ABirthTypes/5
+        // PUT: BirthTypes/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutABirthType(int id, ABirthType aBirthType)
+        public async Task<IActionResult> update(int id, ABirthType aBirthType)
         {
             if (id != aBirthType.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/ABirthTypes
+        // POST: BirthTypes/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<ABirthType>> PostABirthType(ABirthType aBirthType)
+        public async Task<ActionResult<ABirthType>> save(ABirthType aBirthType)
         {
           if (_context.ABirthTypes == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.ABirthTypes.Add(aBirthType);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetABirthType", new { id = aBirthType.Id }, aBirthType);
+            return CreatedAtAction("save", new { id = aBirthType.Id }, aBirthType);
         }
 
-        // DELETE: api/ABirthTypes/5
+        // DELETE: BirthTypes/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteABirthType(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.ABirthTypes == null)
             {

@@ -9,20 +9,20 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class HBuffaloTypesController : ControllerBase
+    public class BuffaloTypesController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public HBuffaloTypesController(PCC_DEVContext context)
+        public BuffaloTypesController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/HBuffaloTypes
+        // GET: BuffaloTypes/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HBuffaloType>>> GetHBuffaloTypes()
+        public async Task<ActionResult<IEnumerable<HBuffaloType>>> list()
         {
           if (_context.HBuffaloTypes == null)
           {
@@ -31,9 +31,9 @@ namespace API_PCC.Controllers
             return await _context.HBuffaloTypes.ToListAsync();
         }
 
-        // GET: api/HBuffaloTypes/5
+        // GET: BuffaloTypes/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<HBuffaloType>> GetHBuffaloType(int id)
+        public async Task<ActionResult<HBuffaloType>> search(int id)
         {
           if (_context.HBuffaloTypes == null)
           {
@@ -49,10 +49,10 @@ namespace API_PCC.Controllers
             return hBuffaloType;
         }
 
-        // PUT: api/HBuffaloTypes/5
+        // PUT: BuffaloTypes/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHBuffaloType(int id, HBuffaloType hBuffaloType)
+        public async Task<IActionResult> update(int id, HBuffaloType hBuffaloType)
         {
             if (id != hBuffaloType.Id)
             {
@@ -80,10 +80,10 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/HBuffaloTypes
+        // POST: BuffaloTypes/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<HBuffaloType>> PostHBuffaloType(HBuffaloType hBuffaloType)
+        public async Task<ActionResult<HBuffaloType>> save(HBuffaloType hBuffaloType)
         {
           if (_context.HBuffaloTypes == null)
           {
@@ -92,12 +92,12 @@ namespace API_PCC.Controllers
             _context.HBuffaloTypes.Add(hBuffaloType);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetHBuffaloType", new { id = hBuffaloType.Id }, hBuffaloType);
+            return CreatedAtAction("save", new { id = hBuffaloType.Id }, hBuffaloType);
         }
 
-        // DELETE: api/HBuffaloTypes/5
+        // DELETE: BuffaloTypes/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHBuffaloType(int id)
+        public async Task<IActionResult> delete(int id)
         {
             if (_context.HBuffaloTypes == null)
             {

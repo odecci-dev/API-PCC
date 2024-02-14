@@ -9,57 +9,57 @@ using Microsoft.AspNetCore.Authorization;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
-    [Route("api/[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
-    public class HHerdTypesController : ControllerBase
+    public class BreedsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
 
-        public HHerdTypesController(PCC_DEVContext context)
+        public BreedsController(PCC_DEVContext context)
         {
             _context = context;
         }
 
-        // GET: api/HHerdTypes
+        // GET: Breeds/list
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<HHerdType>>> GetHHerdTypes()
+        public async Task<ActionResult<IEnumerable<ABreed>>> list()
         {
-          if (_context.HHerdTypes == null)
+          if (_context.ABreeds == null)
           {
               return NotFound();
           }
-            return await _context.HHerdTypes.ToListAsync();
+            return await _context.ABreeds.ToListAsync();
         }
 
-        // GET: api/HHerdTypes/5
+        // GET: Breeds/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<HHerdType>> GetHHerdType(int id)
+        public async Task<ActionResult<ABreed>> search(int id)
         {
-          if (_context.HHerdTypes == null)
+          if (_context.ABreeds == null)
           {
               return NotFound();
           }
-            var hHerdType = await _context.HHerdTypes.FindAsync(id);
+            var aBreed = await _context.ABreeds.FindAsync(id);
 
-            if (hHerdType == null)
+            if (aBreed == null)
             {
                 return NotFound();
             }
 
-            return hHerdType;
+            return aBreed;
         }
 
-        // PUT: api/HHerdTypes/5
+        // PUT: Breeds/update/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutHHerdType(int id, HHerdType hHerdType)
+        public async Task<IActionResult> update(int id, ABreed aBreed)
         {
-            if (id != hHerdType.Id)
+            if (id != aBreed.Id)
             {
                 return BadRequest();
             }
 
-            _context.Entry(hHerdType).State = EntityState.Modified;
+            _context.Entry(aBreed).State = EntityState.Modified;
 
             try
             {
@@ -67,7 +67,7 @@ namespace API_PCC.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!HHerdTypeExists(id))
+                if (!ABreedExists(id))
                 {
                     return NotFound();
                 }
@@ -80,44 +80,44 @@ namespace API_PCC.Controllers
             return NoContent();
         }
 
-        // POST: api/HHerdTypes
+        // POST: Breeds/save
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<HHerdType>> PostHHerdType(HHerdType hHerdType)
+        public async Task<ActionResult<ABreed>> save(ABreed aBreed)
         {
-          if (_context.HHerdTypes == null)
+          if (_context.ABreeds == null)
           {
-              return Problem("Entity set 'PCC_DEVContext.HHerdTypes'  is null.");
+              return Problem("Entity set 'PCC_DEVContext.ABreeds'  is null.");
           }
-            _context.HHerdTypes.Add(hHerdType);
+            _context.ABreeds.Add(aBreed);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetHHerdType", new { id = hHerdType.Id }, hHerdType);
+            return CreatedAtAction("save", new { id = aBreed.Id }, aBreed);
         }
 
-        // DELETE: api/HHerdTypes/5
+        // DELETE: Breeds/delete/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHHerdType(int id)
+        public async Task<IActionResult> delete(int id)
         {
-            if (_context.HHerdTypes == null)
+            if (_context.ABreeds == null)
             {
                 return NotFound();
             }
-            var hHerdType = await _context.HHerdTypes.FindAsync(id);
-            if (hHerdType == null)
+            var aBreed = await _context.ABreeds.FindAsync(id);
+            if (aBreed == null)
             {
                 return NotFound();
             }
 
-            _context.HHerdTypes.Remove(hHerdType);
+            _context.ABreeds.Remove(aBreed);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool HHerdTypeExists(int id)
+        private bool ABreedExists(int id)
         {
-            return (_context.HHerdTypes?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.ABreeds?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }
