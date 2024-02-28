@@ -27,7 +27,7 @@ namespace API_PCC.Models
         public DateTime? Date_Updated { get; set; }
         public bool? Delete_Flag { get; set; }
         public string Created_By { get; set; }
-        public DateTime? Date_Delete { get; set; }
+        public DateTime? Date_Deleted { get; set; }
         public string Updated_By { get; set; }
         public string Deleted_By { get; set; }
         public DateTime? Date_Restored { get; set; }

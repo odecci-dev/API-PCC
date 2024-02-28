@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
-using static API_PCC.Controllers.HerdTypesController;
+using static API_PCC.Controllers.HerdClassificationController;
 
 namespace API_PCC.Controllers
 {
@@ -122,9 +122,9 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, HFeedingSystem hFeedingSystem)
         {
-            if (_context.HHerdTypes == null)
+            if (_context.HFeedingSystems == null)
             {
-                return Problem("Entity set 'PCC_DEVContext.HerdTyoe' is null!");
+                return Problem("Entity set 'PCC_DEVContext.Feeding System' is null!");
             }
 
             var feedingSystem = _context.HFeedingSystems.AsNoTracking().Where(feedSys => !feedSys.DeleteFlag && feedSys.Id == id).FirstOrDefault();
@@ -217,7 +217,7 @@ namespace API_PCC.Controllers
             try
             {
                 hFeedingSystem.DeleteFlag = true;
-                hFeedingSystem.DateDelete = DateTime.Now;
+                hFeedingSystem.DateDeleted = DateTime.Now;
                 hFeedingSystem.DeletedBy = deletionModel.deletedBy;
                 hFeedingSystem.DateRestored = null;
                 hFeedingSystem.RestoredBy = "";
@@ -266,7 +266,7 @@ namespace API_PCC.Controllers
             try
             {
                 feedingSystem.DeleteFlag = !feedingSystem.DeleteFlag;
-                feedingSystem.DateDelete = null;
+                feedingSystem.DateDeleted = null;
                 feedingSystem.DeletedBy = "";
                 feedingSystem.DateRestored = DateTime.Now;
                 feedingSystem.RestoredBy = restorationModel.restoredBy;

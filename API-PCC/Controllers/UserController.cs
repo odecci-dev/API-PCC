@@ -313,6 +313,7 @@ namespace API_PCC.Controllers
 
             try
             {
+                MailSender _mailSender = new MailSender(_emailsettings);
                 _mailSender.sendForgotPasswordMail(email);
                 return Ok("Password Reset Email sent successfully!");
             }
@@ -341,6 +342,7 @@ namespace API_PCC.Controllers
 
             try
             {
+                MailSender _mailSender = new MailSender(_emailsettings);
                 _mailSender.sendForgotPasswordMail(email);
                 return Ok("Password Reset Email resent successfully!");
             }

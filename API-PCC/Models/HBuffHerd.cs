@@ -49,11 +49,13 @@ public partial class HBuffHerd
 
     public string UpdatedBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
+    public string? OrganizationName { get; set; }
+    public string? Center { get; set; }
 }

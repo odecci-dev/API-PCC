@@ -19,13 +19,13 @@ public partial class TblCenterModel
 
     public DateTime? DateUpdated { get; set; }
 
-    public bool? DeleteFlag { get; set; }
+    public bool DeleteFlag { get; set; }
 
     public string CreatedBy { get; set; }
 
     public string UpdatedBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 

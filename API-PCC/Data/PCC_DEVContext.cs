@@ -34,7 +34,7 @@ public partial class PCC_DEVContext : DbContext
 
     public virtual DbSet<HFeedingSystem> HFeedingSystems { get; set; }
 
-    public virtual DbSet<HHerdType> HHerdTypes { get; set; }
+    public virtual DbSet<HHerdClassification> HHerdClassifications { get; set; }
 
     public virtual DbSet<ModuleTbl> ModuleTbls { get; set; }
 
@@ -73,9 +73,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -116,9 +116,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -160,9 +160,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -222,9 +222,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateAcquisition)
                 .HasColumnType("date")
                 .HasColumnName("Date_Acquisition");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateOfBirth)
                 .HasColumnType("date")
                 .HasColumnName("Date_of_Birth");
@@ -302,9 +302,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -353,9 +353,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -399,9 +399,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -492,9 +492,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -528,9 +528,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -572,9 +572,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -604,9 +604,9 @@ public partial class PCC_DEVContext : DbContext
                 .HasColumnName("Updated_By");
         });
 
-        modelBuilder.Entity<HHerdType>(entity =>
-        {
-            entity.ToTable("H_Herd_Type");
+            modelBuilder.Entity<HHerdClassification>(entity =>
+            {
+                entity.ToTable("H_Herd_Classification");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CreatedBy)
@@ -616,9 +616,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -634,7 +634,14 @@ public partial class PCC_DEVContext : DbContext
                 .HasMaxLength(3)
                 .IsUnicode(false)
                 .HasColumnName("H_Type_Code");
-            entity.Property(e => e.HTypeDesc)
+            entity.Property(e => e.LevelFrom)
+                    .IsUnicode(false)
+                    .HasColumnName("Level_from");
+
+            entity.Property(e => e.LevelTo)
+                .IsUnicode(false)
+                .HasColumnName("Level_to");
+                entity.Property(e => e.HTypeDesc)
                 .IsRequired()
                 .HasMaxLength(17)
                 .IsFixedLength()
@@ -662,9 +669,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -730,9 +737,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
@@ -776,6 +783,7 @@ public partial class PCC_DEVContext : DbContext
 
             entity.ToTable("tbl_UsersModel");
 
+
             entity.Property(e => e.Address).IsUnicode(false);
             entity.Property(e => e.Cno)
                 .HasMaxLength(255)
@@ -786,9 +794,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
-            entity.Property(e => e.DateDelete)
+            entity.Property(e => e.DateDeleted)
                 .HasColumnType("date")
-                .HasColumnName("Date_Delete");
+                .HasColumnName("Date_Deleted");
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");

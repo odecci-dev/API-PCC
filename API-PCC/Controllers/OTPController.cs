@@ -60,7 +60,8 @@ namespace API_PCC.Controllers
                     _context.TblRegistrationOtpmodels.Add(model);
                     _context.SaveChanges();
 
-                    _mailSender.sendOtpMail(data);
+                    MailSender email = new MailSender(_emailsettings);
+                    email.sendOtpMail(data);
                     return Ok("OTP sent successfully!!");
                 }
                 else

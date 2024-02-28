@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace API_PCC.Models;
 
-public partial class HHerdType
+public partial class HHerdClassification
 {
     public int Id { get; set; }
 
@@ -25,11 +25,14 @@ public partial class HHerdType
 
     public string UpdatedBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
+
+    public string? LevelFrom { get; set; }
+    public string? LevelTo { get; set; }
 }
