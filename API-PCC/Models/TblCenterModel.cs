@@ -5,19 +5,19 @@ using System.Collections.Generic;
 
 namespace API_PCC.Models;
 
-public partial class ABloodComp
+public partial class TblCenterModel
 {
     public int Id { get; set; }
 
-    public string BloodCode { get; set; }
+    public string CenterName { get; set; }
 
-    public string BloodDesc { get; set; }
+    public string CenterDesc { get; set; }
 
-    public int Status { get; set; }
+    public int? Status { get; set; }
 
-    public DateTime DateCreated { get; set; }
+    public DateTime? DateCreated { get; set; }
 
-    public DateTime DateUpdated { get; set; }
+    public DateTime? DateUpdated { get; set; }
 
     public bool DeleteFlag { get; set; }
 

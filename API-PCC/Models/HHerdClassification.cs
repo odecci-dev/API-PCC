@@ -5,37 +5,13 @@ using System.Collections.Generic;
 
 namespace API_PCC.Models;
 
-public partial class HBuffHerd
+public partial class HHerdClassification
 {
     public int Id { get; set; }
 
-    public string HerdName { get; set; }
-
-    public string HerdCode { get; set; }
-
-    public int HerdSize { get; set; }
-
-    public string BBuffCode { get; set; }
-
-    public string FCode { get; set; }
-
     public string HTypeCode { get; set; }
 
-    public string FeedCode { get; set; }
-
-    public string FarmManager { get; set; }
-
-    public string FarmAddress { get; set; }
-
-    public string Owner { get; set; }
-
-    public string Address { get; set; }
-
-    public string TelNo { get; set; }
-
-    public string MNo { get; set; }
-
-    public string Email { get; set; }
+    public string HTypeDesc { get; set; }
 
     public int Status { get; set; }
 
@@ -56,6 +32,7 @@ public partial class HBuffHerd
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
-    public string? OrganizationName { get; set; }
-    public string? Center { get; set; }
+
+    public string? LevelFrom { get; set; }
+    public string? LevelTo { get; set; }
 }

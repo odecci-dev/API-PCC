@@ -25,7 +25,7 @@ public partial class ModuleTbl
 
     public string RestoredBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 

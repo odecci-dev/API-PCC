@@ -21,6 +21,14 @@ public partial class ABuffAnimal
 
     public string Sex { get; set; }
 
+    public string BuffaloType { get; set; }
+
+    public string IdSystem { get; set; }
+
+    public string PedigreeRecords { get; set; }
+
+    public byte[] Photo { get; set; }
+
     public string CountryBirth { get; set; }
 
     public string OriginAcquisition { get; set; }
@@ -47,7 +55,7 @@ public partial class ABuffAnimal
 
     public string UpdatedBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 

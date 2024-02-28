@@ -68,8 +68,28 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[tbl_Attempts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_CenterModel]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_RegistrationOTPModel]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_StatusModel]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[tbl_UsersModel]",
          "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[GetUserLogIn]",
+         "ObjectType": 1
       }
    ],
    "UiHint": "lerjun-pc.PCC_DEV.dbo",

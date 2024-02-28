@@ -33,33 +33,31 @@ public partial class TblUsersModel
 
     public int? Active { get; set; }
 
-    public DateTime DateCreated { get; set; }
-
     public string Cno { get; set; }
 
     public string Address { get; set; }
 
-    public string Otp { get; set; }
+    public int? Status { get; set; }
 
-    public int? Attempts { get; set; }
+    public DateTime? DateCreated { get; set; }
 
-    public int Status { get; set; }
+    public DateTime? DateUpdated { get; set; }
 
-    public DateTime DateCreated1 { get; set; }
-
-    public DateTime DateUpdated { get; set; }
-
-    public bool DeleteFlag { get; set; }
+    public bool? DeleteFlag { get; set; }
 
     public string CreatedBy { get; set; }
 
     public string UpdatedBy { get; set; }
 
-    public DateTime? DateDelete { get; set; }
+    public DateTime? DateDeleted { get; set; }
 
     public string DeletedBy { get; set; }
 
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
+
+    public int? CenterId { get; set; }
+
+    public bool? AgreementStatus { get; set; }
 }
