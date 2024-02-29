@@ -56,6 +56,8 @@ public partial class HBuffHerd
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
-    public string? OrganizationName { get; set; }
-    public string? Center { get; set; }
+
+    public string OrganizationName { get; set; }
+
+    public string Center { get; set; }
 }

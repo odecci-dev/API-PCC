@@ -33,13 +33,19 @@ public partial class TblUsersModel
 
     public int? Active { get; set; }
 
+    public DateTime? DateCreated { get; set; }
+
     public string Cno { get; set; }
 
     public string Address { get; set; }
 
+    public string Otp { get; set; }
+
+    public int? Attempts { get; set; }
+
     public int? Status { get; set; }
 
-    public DateTime? DateCreated { get; set; }
+    public DateTime DateCreated1 { get; set; }
 
     public DateTime? DateUpdated { get; set; }
 

@@ -261,11 +261,11 @@ namespace API_PCC.Controllers
                     db.DB_WithParam(user_insert);
 
 
-                    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                    const string chars = "0123456789";
                     Random random_OTP = new Random();
                     string otp_res = "";
-                    char[] randomArray = new char[8];
-                    for (int i = 0; i < 8; i++)
+                    char[] randomArray = new char[10];
+                    for (int i = 0; i < 5; i++)
                     {
                         otp_res += chars[random.Next(chars.Length)];
                     }

@@ -26,6 +26,8 @@ public partial class PCC_DEVContext : DbContext
 
     public virtual DbSet<ActionTbl> ActionTbls { get; set; }
 
+    public virtual DbSet<EmailSenderCredential> EmailSenderCredentials { get; set; }
+
     public virtual DbSet<HBuffHerd> HBuffHerds { get; set; }
 
     public virtual DbSet<HBuffaloType> HBuffaloTypes { get; set; }
@@ -40,17 +42,15 @@ public partial class PCC_DEVContext : DbContext
 
     public virtual DbSet<TblApiTokenModel> TblApiTokenModels { get; set; }
 
-    public virtual DbSet<TblAttempt> TblAttempts { get; set; }
-
     public virtual DbSet<TblCenterModel> TblCenterModels { get; set; }
 
     public virtual DbSet<TblRegistrationOtpmodel> TblRegistrationOtpmodels { get; set; }
 
     public virtual DbSet<TblStatusModel> TblStatusModels { get; set; }
 
-    public virtual DbSet<TblUsersModel> TblUsersModels { get; set; }
-
     public virtual DbSet<TblTokenModel> TblTokenModels { get; set; }
+
+    public virtual DbSet<TblUsersModel> TblUsersModels { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -381,6 +381,15 @@ public partial class PCC_DEVContext : DbContext
                 .HasColumnName("Updated_By");
         });
 
+        modelBuilder.Entity<EmailSenderCredential>(entity =>
+        {
+            entity.Property(e => e.DateCreated).HasColumnType("date");
+            entity.Property(e => e.Email)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.ExpiryDate).HasColumnType("datetime");
+        });
+
         modelBuilder.Entity<HBuffHerd>(entity =>
         {
             entity.ToTable("H_Buff_Herd");
@@ -394,6 +403,7 @@ public partial class PCC_DEVContext : DbContext
                 .HasMaxLength(10)
                 .IsUnicode(false)
                 .HasColumnName("B_Buff_Code");
+            entity.Property(e => e.Center).IsUnicode(false);
             entity.Property(e => e.CreatedBy)
                 .IsRequired()
                 .IsUnicode(false)
@@ -455,6 +465,9 @@ public partial class PCC_DEVContext : DbContext
                 .HasMaxLength(13)
                 .IsUnicode(false)
                 .HasColumnName("M_No");
+            entity.Property(e => e.OrganizationName)
+                .IsUnicode(false)
+                .HasColumnName("Organization_name");
             entity.Property(e => e.Owner)
                 .IsRequired()
                 .IsUnicode(false);
@@ -606,9 +619,11 @@ public partial class PCC_DEVContext : DbContext
                 .HasColumnName("Updated_By");
         });
 
-            modelBuilder.Entity<HHerdClassification>(entity =>
-            {
-                entity.ToTable("H_Herd_Classification");
+        modelBuilder.Entity<HHerdClassification>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_H_Herd_Type");
+
+            entity.ToTable("H_Herd_Classification");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CreatedBy)
@@ -636,18 +651,17 @@ public partial class PCC_DEVContext : DbContext
                 .HasMaxLength(3)
                 .IsUnicode(false)
                 .HasColumnName("H_Type_Code");
+            entity.Property(e => e.HTypeDesc)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false)
+                .HasColumnName("H_Type_Desc");
             entity.Property(e => e.LevelFrom)
-                    .IsUnicode(false)
-                    .HasColumnName("Level_from");
-
+                .IsUnicode(false)
+                .HasColumnName("Level_from");
             entity.Property(e => e.LevelTo)
                 .IsUnicode(false)
                 .HasColumnName("Level_to");
-                entity.Property(e => e.HTypeDesc)
-                .IsRequired()
-                .HasMaxLength(17)
-                .IsFixedLength()
-                .HasColumnName("H_Type_Desc");
             entity.Property(e => e.RestoredBy)
                 .IsUnicode(false)
                 .HasColumnName("Restored_By");
@@ -709,31 +723,17 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.Role).IsUnicode(false);
         });
 
-        modelBuilder.Entity<TblAttempt>(entity =>
-        {
-            entity.ToTable("tbl_Attempts");
-
-            entity.Property(e => e.Ipaddress)
-                .HasMaxLength(500)
-                .IsUnicode(false)
-                .HasColumnName("IPAddress");
-            entity.Property(e => e.Location)
-                .HasMaxLength(500)
-                .IsUnicode(false);
-        });
-
         modelBuilder.Entity<TblCenterModel>(entity =>
         {
             entity.ToTable("tbl_CenterModel");
 
+            entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CenterDesc)
-                .HasMaxLength(12)
                 .IsUnicode(false)
-                .HasColumnName("Center_Desc");
-            entity.Property(e => e.CenterName)
-                .HasMaxLength(12)
-                .IsUnicode(false);
+                .HasColumnName("Center_desc");
+            entity.Property(e => e.CenterName).IsUnicode(false);
             entity.Property(e => e.CreatedBy)
+                .IsRequired()
                 .IsUnicode(false)
                 .HasColumnName("Created_By");
             entity.Property(e => e.DateCreated)
@@ -756,6 +756,7 @@ public partial class PCC_DEVContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("Restored_By");
             entity.Property(e => e.UpdatedBy)
+                .IsRequired()
                 .IsUnicode(false)
                 .HasColumnName("Updated_By");
         });
@@ -774,8 +775,27 @@ public partial class PCC_DEVContext : DbContext
         {
             entity.ToTable("tbl_StatusModel");
 
+            entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Status)
-                .HasMaxLength(250)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<TblTokenModel>(entity =>
+        {
+            entity.ToTable("tbl_TokenModel");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.DateCreated)
+                .HasColumnType("date")
+                .HasColumnName("Date_Created");
+            entity.Property(e => e.ExpiryDate).HasColumnType("date");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Token)
+                .IsRequired()
                 .IsUnicode(false);
         });
 
@@ -785,7 +805,6 @@ public partial class PCC_DEVContext : DbContext
 
             entity.ToTable("tbl_UsersModel");
 
-
             entity.Property(e => e.Address).IsUnicode(false);
             entity.Property(e => e.Cno)
                 .HasMaxLength(255)
@@ -793,7 +812,8 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.CreatedBy)
                 .IsUnicode(false)
                 .HasColumnName("Created_By");
-            entity.Property(e => e.DateCreated)
+            entity.Property(e => e.DateCreated).HasColumnType("date");
+            entity.Property(e => e.DateCreated1)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
             entity.Property(e => e.DateDeleted)
@@ -832,6 +852,9 @@ public partial class PCC_DEVContext : DbContext
                 .HasColumnName("JWToken");
             entity.Property(e => e.Lname).IsUnicode(false);
             entity.Property(e => e.Mname).IsUnicode(false);
+            entity.Property(e => e.Otp)
+                .IsUnicode(false)
+                .HasColumnName("OTP");
             entity.Property(e => e.Password)
                 .IsRequired()
                 .IsUnicode(false);
@@ -846,30 +869,6 @@ public partial class PCC_DEVContext : DbContext
                 .IsUnicode(false);
         });
 
-
-        modelBuilder.Entity<TblTokenModel>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_tbl_TokenModel");
-
-            entity.ToTable("tbl_TokenModel");
-            entity.Property(e => e.Token)
-                   .IsUnicode(false)
-                   .IsRequired()
-                   .HasColumnName("Token");
-            entity.Property(e => e.ExpiryDate)
-                   .IsUnicode(false)
-                   .IsRequired()
-                   .HasColumnName("ExpiryDate");
-            entity.Property(e => e.Status)
-                   .IsUnicode(false)
-                   .IsRequired()
-                   .HasColumnName("Status");
-            entity.Property(e => e.DateCreated)
-                   .IsUnicode(false)
-                   .IsRequired()
-                   .HasColumnName("Date_Created");
-        });
-            
         OnModelCreatingGeneratedProcedures(modelBuilder);
         OnModelCreatingPartial(modelBuilder);
     }

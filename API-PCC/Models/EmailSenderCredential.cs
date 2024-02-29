@@ -5,15 +5,15 @@ using System.Collections.Generic;
 
 namespace API_PCC.Models;
 
-public partial class TblAttempt
+public partial class EmailSenderCredential
 {
     public int Id { get; set; }
 
-    public int? UserId { get; set; }
+    public string Email { get; set; }
 
-    public int? AttemptCount { get; set; }
+    public DateTime? DateCreated { get; set; }
 
-    public string Ipaddress { get; set; }
+    public int? Status { get; set; }
 
-    public string Location { get; set; }
+    public DateTime? ExpiryDate { get; set; }
 }

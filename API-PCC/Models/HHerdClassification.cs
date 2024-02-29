@@ -33,6 +33,7 @@ public partial class HHerdClassification
 
     public string RestoredBy { get; set; }
 
-    public string? LevelFrom { get; set; }
-    public string? LevelTo { get; set; }
+    public string LevelFrom { get; set; }
+
+    public string LevelTo { get; set; }
 }

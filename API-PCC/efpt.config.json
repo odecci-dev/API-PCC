@@ -40,6 +40,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[EmailSenderCredentials]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[H_Buff_Herd]",
          "ObjectType": 0
       },
@@ -56,7 +60,7 @@
          "ObjectType": 0
       },
       {
-         "Name": "[dbo].[H_Herd_Type]",
+         "Name": "[dbo].[H_Herd_Classification]",
          "ObjectType": 0
       },
       {
@@ -65,10 +69,6 @@
       },
       {
          "Name": "[dbo].[tbl_ApiTokenModel]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[tbl_Attempts]",
          "ObjectType": 0
       },
       {
@@ -81,6 +81,10 @@
       },
       {
          "Name": "[dbo].[tbl_StatusModel]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[tbl_TokenModel]",
          "ObjectType": 0
       },
       {

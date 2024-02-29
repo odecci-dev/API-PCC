@@ -23,7 +23,7 @@ namespace API_PCC.Models
         public string Cno { get; set; }
         public string Address { get; set; }
         public string Status { get; set; }
-        public DateTime? Date_Created { get; set; }
+        public DateTime Date_Created { get; set; }
         public DateTime? Date_Updated { get; set; }
         public bool? Delete_Flag { get; set; }
         public string Created_By { get; set; }
