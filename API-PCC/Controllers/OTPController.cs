@@ -105,7 +105,7 @@ namespace API_PCC.Controllers
                         var userModel = _context.TblUsersModels.Where(user => user.Email == data.Email).FirstOrDefault();
                         _context.Entry(userModel).State = EntityState.Modified;
                         userModel.Status = 4;
-                        return BadRequest("OTP verification unsuccessful!");
+                        return Problem("Incorrect OTP. Please try again!");
                     }
                     
                 }
