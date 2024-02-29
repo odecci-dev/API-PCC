@@ -50,6 +50,8 @@ public partial class PCC_DEVContext : DbContext
 
     public virtual DbSet<TblUsersModel> TblUsersModels { get; set; }
 
+    public virtual DbSet<TblTokenModel> TblTokenModels { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ABirthType>(entity =>
@@ -844,6 +846,30 @@ public partial class PCC_DEVContext : DbContext
                 .IsUnicode(false);
         });
 
+
+        modelBuilder.Entity<TblTokenModel>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_tbl_TokenModel");
+
+            entity.ToTable("tbl_TokenModel");
+            entity.Property(e => e.Token)
+                   .IsUnicode(false)
+                   .IsRequired()
+                   .HasColumnName("Token");
+            entity.Property(e => e.ExpiryDate)
+                   .IsUnicode(false)
+                   .IsRequired()
+                   .HasColumnName("ExpiryDate");
+            entity.Property(e => e.Status)
+                   .IsUnicode(false)
+                   .IsRequired()
+                   .HasColumnName("Status");
+            entity.Property(e => e.DateCreated)
+                   .IsUnicode(false)
+                   .IsRequired()
+                   .HasColumnName("Date_Created");
+        });
+            
         OnModelCreatingGeneratedProcedures(modelBuilder);
         OnModelCreatingPartial(modelBuilder);
     }

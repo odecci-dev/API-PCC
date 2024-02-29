@@ -20,7 +20,7 @@ namespace API_PCC.Utils
             try
             {
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress(_appSettings.Title, "misbuff@pcc.gov.ph"));
+                message.From.Add(new MailboxAddress(_appSettings.Title.OTP, "misbuff@pcc.gov.ph"));
                 message.To.Add(new MailboxAddress("PCC-Administrator", data.Email));
                 message.Subject = "OTP";
 
@@ -73,8 +73,8 @@ namespace API_PCC.Utils
                 message.Body = bodyBuilder.ToMessageBody();
                 using (var client = new SmtpClient())
                 {
-                    await client.ConnectAsync("smtp.office365.com", 25,false);
-                    await client.AuthenticateAsync("misbuff@pcc.gov.ph", "Gipabgs2024");
+                    await client.ConnectAsync(_appSettings.Host, 587, MailKit.Security.SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(_appSettings.username, _appSettings.password);
                     await client.SendAsync(message);
                     client.Disconnect(true);
                 }
@@ -84,16 +84,13 @@ namespace API_PCC.Utils
                 throw;
             }
         }
-        public async void sendForgotPasswordMail(String email)
+        public async void sendForgotPasswordMail(String email, String forgotPasswordLInk)
         {
             try
             {
-                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(email);
-                string emailBase64 = System.Convert.ToBase64String(plainTextBytes);
-
-                var emailsend = "" + email;
+             
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress(_appSettings.Title, _appSettings.username));
+                message.From.Add(new MailboxAddress(_appSettings.Title.ForgotPassword, _appSettings.username));
                 message.To.Add(new MailboxAddress("PCC-Administrator", email));
                 message.Subject = "Reset Password";
                 var bodyBuilder = new BodyBuilder();
@@ -133,14 +130,14 @@ namespace API_PCC.Utils
                 <body>
                     <h3>Reset Password</h3>
                     <p>We received a request to reset the password for your account. If you did not initiate this request, please ignore this email.</p>
-                    <p>To reset your password, please click the following link:<a href=" + emailsend + ">" + emailsend + "</a>. This link will be valid for the next 24 hours.</p>" +
-                    "<p>If you have any issues with resetting your password or need further assistance, please contact our support team at <b>(support email here)</b>.</p>" +
+                    <p>To reset your password, please click the following link:<a href = " + forgotPasswordLInk + "> " + forgotPasswordLInk + " </a>. This link will be valid for the next 24 hours.</p>" +
+                    "<p>If you have any issues with resetting your password or need further assistance, please contact our support team at <b>support@odecci.com</b>.</p>" +
                 "</body> " +
                 "</html>";
                 message.Body = bodyBuilder.ToMessageBody();
                 using (var client = new SmtpClient())
                 {
-                    await client.ConnectAsync(_appSettings.Host,25 /*587*/, /*MailKit.Security.SecureSocketOptions.StartTls*/ false);
+                    await client.ConnectAsync(_appSettings.Host, 587, MailKit.Security.SecureSocketOptions.StartTls);
                     await client.AuthenticateAsync(_appSettings.username, _appSettings.password);
                     await client.SendAsync(message);
                     client.Disconnect(true);
@@ -150,7 +147,6 @@ namespace API_PCC.Utils
             {
                 throw;
             }
-            //}
         }
     }
 }
