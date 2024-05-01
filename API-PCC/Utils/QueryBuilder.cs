@@ -95,6 +95,12 @@ namespace API_PCC.Utils
         {
             return Constants.DBQuery.FARM_OWNER_SELECT + "WHERE FirstName = @FirstName AND LastName = @LastName";
         }
+
+        public static String buildFarmOwnerSearchQueryByFirstNameOrLastName()
+        {
+            return Constants.DBQuery.FARM_OWNER_SELECT + "WHERE FirstName = @SearchParam OR LastName = @SearchParam";
+        }
+
         public static String buildFarmOwnerSearchQueryById()
         {
             return Constants.DBQuery.FARM_OWNER_SELECT + "WHERE id = @Id";
@@ -446,6 +452,50 @@ namespace API_PCC.Utils
             return Constants.DBQuery.USERS_SELECT + "WHERE DELETE_FLAG = 0 AND ID <> @Id AND (USERNAME = @Username OR (Fullname = @Fullname AND Fname = @Fname AND Lname = @Lname AND Mname = @Mname AND Email = @Email))";
         }
 
+        public static String buildBirthTypeSearchQueryByBirthTypeCodeOrBirthTypeDesc()
+        {
+            return Constants.DBQuery.FARM_OWNER_SELECT + "WHERE DELETE_FLAG = 0 AND (BIRTH_TYPE_CODE = @SearchParam AND BIRTH_TYPE_DESC = @SearchParam)";
+        }
+
+        public static String buildUserTypeSearchQuery(CommonSearchFilterModel searchFilterModel)
+        {
+            String userTypeSelect = Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 ";
+            if (searchFilterModel.searchParam != null && searchFilterModel.searchParam != "")
+            {
+                userTypeSelect = userTypeSelect + "AND (CODE = @SearchParam OR NAME = @SearchParam) ";
+            }
+            return userTypeSelect;
+        }
+
+        public static String buildUserTypeQueryByCodeOrName()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 AND (CODE = @SearchParam OR NAME = @SearchParam)";
+        }
+
+        public static String buildUserTypeQueryByName()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 AND NAME = @Name";
+        }
+
+        public static String buildUserTypeQueryById()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 AND ID = @Id";
+        }
+
+        public static String buildUserTypeDuplicateCheckUpdateQuery()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 AND ID <> @Id AND (Code = @Code AND Name = @Name)";
+        }
+
+        public static String buildUserTypeDuplicateCheckSaveQuery()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 0 AND (Code = @Code AND Name = @Name)";
+        }
+
+        public static String buildUserTypeDeletedSearchQueryById()
+        {
+            return Constants.DBQuery.USER_TYPE_TABLE_SELECT + "WHERE DELETE_FLAG = 1 AND ID = @Id";
+        }
     }
 
 }

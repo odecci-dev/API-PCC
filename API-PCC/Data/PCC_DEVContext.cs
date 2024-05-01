@@ -60,6 +60,7 @@ public partial class PCC_DEVContext : DbContext
     public virtual DbSet<SireModel> tblSireModels { get; set; }
 
     public virtual DbSet<DamModel> tblDamModels { get; set; }
+    public virtual DbSet<TblUserTypeModel> tblUserTypeModels { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1019,6 +1020,46 @@ public partial class PCC_DEVContext : DbContext
                    .IsUnicode(false)
                    .IsRequired()
                    .HasColumnName("Region");
+        });
+
+        modelBuilder.Entity<TblUserTypeModel>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_tbl_UserTypeModel");
+
+            entity.Property(e => e.Id).HasColumnName("Id");
+            entity.ToTable("tbl_UserTypeModel");
+            entity.Property(e => e.code)
+                   .IsUnicode(false)
+                   .HasColumnName("Code");
+            entity.Property(e => e.name)
+                   .IsUnicode(false)
+                   .IsRequired()
+                   .HasColumnName("Name");
+            entity.Property(e => e.CreatedBy)
+                .IsUnicode(false)
+                .HasColumnName("Created_By");
+            entity.Property(e => e.DateCreated)
+                .HasColumnType("date")
+                .HasColumnName("Date_Created");
+            entity.Property(e => e.UpdatedBy)
+                .IsUnicode(false)
+                .HasColumnName("Updated_By");
+            entity.Property(e => e.DateUpdated)
+                .HasColumnType("date")
+                .HasColumnName("Date_Updated");
+            entity.Property(e => e.DeleteFlag).HasColumnName("Delete_Flag");
+            entity.Property(e => e.DeletedBy)
+                .IsUnicode(false)
+                .HasColumnName("Deleted_By");
+            entity.Property(e => e.DateDeleted)
+                .HasColumnType("date")
+                .HasColumnName("Date_Deleted");
+            entity.Property(e => e.RestoredBy)
+                .IsUnicode(false)
+                .HasColumnName("Restored_By");
+            entity.Property(e => e.DateRestored)
+                .HasColumnType("date")
+                .HasColumnName("Date_Restored");
         });
 
         OnModelCreatingGeneratedProcedures(modelBuilder);

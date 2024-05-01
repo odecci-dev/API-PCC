@@ -32,5 +32,7 @@ FROM            H_Buff_Herd INNER JOIN
 
         public static readonly String ORIGIN_ACQUISITION_SELECT = $@"SELECT OA.* FROM TBL_ORIGINOFACQUISITIONMODEL OA ";
 
+        public static readonly String USER_TYPE_TABLE_SELECT = $@"SELECT * FROM TBL_USERTYPEMODEL ";
+
     }
 }
