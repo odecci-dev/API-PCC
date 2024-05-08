@@ -15,6 +15,7 @@ using System.Drawing.Printing;
 using System.Data;
 using System.Data.SqlClient;
 using API_PCC.Utils;
+using API_PCC.EntityModels;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
@@ -57,6 +58,8 @@ namespace API_PCC.Controllers
             totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
             items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
+            var birthTypes = convertDataRowListToBirthTypeList(items);
+
             var result = new List<BirthTypesPagedModel>();
             var item = new BirthTypesPagedModel();
 
@@ -71,10 +74,23 @@ namespace API_PCC.Controllers
             item.TotalPage = t_records.ToString();
             item.PageSize = pagesize.ToString();
             item.TotalRecord = totalItems.ToString();
-            item.items = items;
+            item.items = birthTypes;
             result.Add(item);
 
             return result;
+        }
+
+        private List<ABirthType> convertDataRowListToBirthTypeList(List<DataRow> dataRowList)
+        {
+            var birthTypeList = new List<ABirthType>();
+
+            foreach (DataRow dataRow in dataRowList)
+            {
+                var birthType = DataRowToObject.ToObject<ABirthType>(dataRow);
+                birthTypeList.Add(birthType);
+            }
+
+            return birthTypeList;
         }
 
         private SqlParameter[] populateSqlParameters(BirthTypesSearchFilterModel searchFilterModel)
