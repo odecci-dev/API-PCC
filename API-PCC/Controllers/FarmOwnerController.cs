@@ -74,8 +74,8 @@ namespace API_PCC.Controllers
             item.TotalPage = t_records.ToString();
             item.PageSize = pagesize.ToString();
             item.TotalRecord = totalItems.ToString();
-            item.items = items;
-            result.Add(farmOwners);
+            item.items = farmOwners;
+            result.Add(item);
 
             return result;
         }
