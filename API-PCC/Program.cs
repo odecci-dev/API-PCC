@@ -2,8 +2,10 @@ using API_PCC;
 using API_PCC.Data;
 using API_PCC.Manager;
 using API_PCC.Models;
+using API_PCC.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using static AngouriMath.MathS;
 using static API_PCC.Controllers.UserController;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +15,10 @@ builder.Services.AddDbContext<PCC_DEVContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DevConnection")));
 var appSettingsSection = builder.Configuration.GetSection("Mail");
 builder.Services.Configure<EmailSettings>(appSettingsSection);
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new TrimStringConverter());
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
