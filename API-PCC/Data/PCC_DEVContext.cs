@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using API_PCC.EntityModels;
 using API_PCC.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
+using Microsoft.Extensions.Hosting;
 
 namespace API_PCC.Data;
 
@@ -58,12 +60,40 @@ public partial class PCC_DEVContext : DbContext
     public virtual DbSet<TblFarmOwner> TblFarmOwners { get; set; }
 
     public virtual DbSet<SireModel> tblSireModels { get; set; }
-
     public virtual DbSet<DamModel> tblDamModels { get; set; }
     public virtual DbSet<TblUserTypeModel> tblUserTypeModels { get; set; }
 
+    public virtual DbSet<BuffHerdJoinTable> HerdJoinTables { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<HBuffHerd>()
+            .HasMany(e => e.buffaloType)
+            .WithMany(e => e.buffHerd)
+            .UsingEntity<BuffHerdJoinTable>();
+
+        modelBuilder.Entity<HBuffHerd>()
+            .HasMany(e => e.feedingSystem)
+            .WithMany(e => e.buffHerd)
+            .UsingEntity<BuffHerdJoinTable>();
+
+        modelBuilder.Entity<BuffHerdJoinTable>(entity =>
+        {
+            entity.ToTable("tbl_Join_BuffHerd");
+
+            entity.HasKey(e => e.BuffHerdJoinTableId).HasName("PK_tbl_Join_BuffHerd");
+
+            entity.Property(e => e.BuffHerdJoinTableId)
+                  .HasColumnName("Join_BuffHerd_Id");
+            entity.Property(e => e.BuffaloTypeId)
+                  .HasColumnName("Buffalo_Type_Id");
+            entity.Property(e => e.BuffHerdId)
+                  .HasColumnName("Buff_Herd_Id");
+            entity.Property(e => e.FeedingSystemId)
+                 .HasColumnName("Feeding_System_Id");
+        });
+
         modelBuilder.Entity<ABirthType>(entity =>
         {
             entity.ToTable("A_Birth_Type");
@@ -395,10 +425,6 @@ public partial class PCC_DEVContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("Herd_Code");
             entity.Property(e => e.HerdSize).HasColumnName("Herd_Size");
-            entity.Property(e => e.BreedTypeCode)
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasColumnName("Breed_Type_Code");
             entity.Property(e => e.FarmAffilCode)
                 .HasMaxLength(10)
                 .IsUnicode(false)
@@ -407,10 +433,6 @@ public partial class PCC_DEVContext : DbContext
                 .HasMaxLength(3)
                 .IsUnicode(false)
                 .HasColumnName("Herd_Class_Desc");
-            entity.Property(e => e.FeedingSystemCode)
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasColumnName("Feeding_System_Code");
             entity.Property(e => e.FarmManager)
                 .IsUnicode(false)
                 .HasColumnName("Farm_Manager");
@@ -463,8 +485,9 @@ public partial class PCC_DEVContext : DbContext
         modelBuilder.Entity<HBuffaloType>(entity =>
         {
             entity.ToTable("H_Buffalo_Type");
+            entity.HasKey(e => e.Id).HasName("PK_H_Buffalo_Type");
 
-            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Id).HasColumnName("Id");
             entity.Property(e => e.BreedTypeCode)
                 .IsRequired()
                 .HasMaxLength(10)
@@ -565,12 +588,12 @@ public partial class PCC_DEVContext : DbContext
                 .IsRequired()
                 .HasMaxLength(10)
                 .IsUnicode(false)
-                .HasColumnName("Feeding_System_Code");
+                .HasColumnName("Feed_Code");
             entity.Property(e => e.FeedingSystemDesc)
                 .IsRequired()
                 .HasMaxLength(15)
                 .IsUnicode(false)
-                .HasColumnName("Feeding_System_Desc");
+                .HasColumnName("Feed_Desc");
             entity.Property(e => e.Status)
                 .IsRequired()
                 .IsUnicode(false)

@@ -9,6 +9,8 @@ public partial class HFeedingSystem
 {
     public int Id { get; set; }
 
+    public ICollection<HBuffHerd>? buffHerd { get; set; }
+
     public string FeedingSystemCode { get; set; }
 
     public string FeedingSystemDesc { get; set; }

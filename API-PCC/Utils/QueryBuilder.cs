@@ -372,6 +372,10 @@ namespace API_PCC.Utils
             }
             return herdSelect;
         }
+        public static String buildFeedingSystemSearchByFeedingSystemCode()
+        {
+            return Constants.DBQuery.FEEDING_SYSTEM_SELECT + "WHERE DELETE_FLAG = 0  AND FEED_CODE = @FeedCode";
+        }
 
         public static String buildBuffaloTypeSearchQuery(CommonSearchFilterModel searchFilterModel)
         {
@@ -454,7 +458,7 @@ namespace API_PCC.Utils
 
         public static String buildBirthTypeSearchQueryByBirthTypeCodeOrBirthTypeDesc()
         {
-            return Constants.DBQuery.FARM_OWNER_SELECT + "WHERE DELETE_FLAG = 0 AND (BIRTH_TYPE_CODE = @SearchParam AND BIRTH_TYPE_DESC = @SearchParam)";
+            return Constants.DBQuery.BIRTH_TYPE_SELECT + "WHERE DELETE_FLAG = 0 AND (BIRTH_TYPE_CODE = @SearchParam AND BIRTH_TYPE_DESC = @SearchParam)";
         }
 
         public static String buildUserTypeSearchQuery(CommonSearchFilterModel searchFilterModel)

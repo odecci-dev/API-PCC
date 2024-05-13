@@ -231,7 +231,7 @@ namespace API_PCC.Controllers
                 return Conflict("No records matched!");
             }
 
-            bool FeedingSystemDescExistsInBuffHerd = _context.HBuffHerds.Any(buffHerd => !buffHerd.DeleteFlag && buffHerd.FeedingSystemCode == hFeedingSystem.FeedingSystemCode);
+            bool FeedingSystemDescExistsInBuffHerd = _context.HBuffHerds.Include(herd => herd.feedingSystem).Any(buffHerd => !buffHerd.DeleteFlag && buffHerd.feedingSystem.Any(fs => fs.FeedingSystemCode.Equals(hFeedingSystem.FeedingSystemCode)));
 
             if(FeedingSystemDescExistsInBuffHerd)
             {
