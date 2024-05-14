@@ -29,7 +29,6 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<IEnumerable<FeedingSystemResponseModel>>> List(CommonSearchFilterModel searchFilter)
         {
-            sanitizeInput(searchFilter);
             try
             {
                 DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFeedingSystemSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
@@ -59,11 +58,6 @@ namespace API_PCC.Controllers
             }
 
             return sqlParameters.ToArray();
-        }
-
-        private void sanitizeInput(CommonSearchFilterModel searchFilter)
-        {
-            searchFilter.searchParam = StringSanitizer.sanitizeString(searchFilter.searchParam);
         }
 
         private List<FeedingSystemPagedModel> buildFeedingSystemPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
@@ -237,7 +231,7 @@ namespace API_PCC.Controllers
                 return Conflict("No records matched!");
             }
 
-            bool FeedingSystemDescExistsInBuffHerd = _context.HBuffHerds.Any(buffHerd => !buffHerd.DeleteFlag && buffHerd.FeedingSystemCode == hFeedingSystem.FeedingSystemCode);
+            bool FeedingSystemDescExistsInBuffHerd = _context.HBuffHerds.Include(herd => herd.feedingSystem).Any(buffHerd => !buffHerd.DeleteFlag && buffHerd.feedingSystem.Any(fs => fs.FeedingSystemCode.Equals(hFeedingSystem.FeedingSystemCode)));
 
             if(FeedingSystemDescExistsInBuffHerd)
             {

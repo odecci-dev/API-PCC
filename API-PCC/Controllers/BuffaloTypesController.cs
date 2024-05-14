@@ -29,7 +29,6 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<IEnumerable<BuffaloTypePagedModel>>> list(CommonSearchFilterModel searchFilter)
         {
-            sanitizeInput(searchFilter);
             try
             {
                 DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
@@ -320,11 +319,6 @@ namespace API_PCC.Controllers
             });
 
             return sqlParameters.ToArray();
-        }
-
-        private void sanitizeInput(CommonSearchFilterModel searchFilter)
-        {
-            searchFilter.searchParam = StringSanitizer.sanitizeString(searchFilter.searchParam);
         }
 
         private List<BuffaloTypePagedModel> buildBuffaloTypesPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)

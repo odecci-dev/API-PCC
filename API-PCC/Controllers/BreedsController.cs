@@ -226,11 +226,6 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
-
-        private void sanitizeInput(CommonSearchFilterModel searchFilter)
-        {
-            searchFilter.searchParam = StringSanitizer.sanitizeString(searchFilter.searchParam);
-        }
         private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
         {
 

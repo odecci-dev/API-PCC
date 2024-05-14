@@ -29,7 +29,6 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<IEnumerable<HerdClassificationPagedModel>>> List(CommonSearchFilterModel searchFilter)
         {
-            sanitizeInput(searchFilter);
 
             try
             {
@@ -322,11 +321,6 @@ namespace API_PCC.Controllers
 
 
             return sqlParameters.ToArray();
-        }
-
-        private void sanitizeInput(CommonSearchFilterModel searchFilter)
-        {
-            searchFilter.searchParam = StringSanitizer.sanitizeString(searchFilter.searchParam);
         }
 
         private List<HerdClassificationPagedModel> buildHerdClassificationPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
