@@ -13,6 +13,7 @@ using System.Data;
 using System.Text;
 using static API_PCC.Manager.DBMethods;
 using System.Data.SqlClient;
+using NuGet.Packaging;
 
 namespace API_PCC.Controllers
 {
@@ -96,7 +97,44 @@ namespace API_PCC.Controllers
             public string Password { get; set; }
         }
 
-       
+        public partial class RegistrationModel
+        {
+            public string Username { get; set; }
+
+            public string Password { get; set; }
+
+            public string Fname { get; set; }
+
+            public string? Lname { get; set; }
+
+            public string? Mname { get; set; }
+
+            public string Email { get; set; }
+
+            public string Gender { get; set; }
+
+            public string? EmployeeId { get; set; }
+
+            public string Jwtoken { get; set; }
+
+            public string? FilePath { get; set; }
+
+            public int? Active { get; set; }
+
+            public string? Cno { get; set; }
+
+            public string? Address { get; set; }
+
+            public int? Status { get; set; }
+            public string? CreatedBy { get; set; }
+
+            public int? CenterId { get; set; }
+
+            public bool? AgreementStatus { get; set; }
+
+            public Dictionary<string, List<int>>? userAccess { get; set; }
+        }
+
         // POST: user/login
 
         [HttpPost]
@@ -128,7 +166,8 @@ namespace API_PCC.Controllers
                 return Problem("Entity set 'PCC_DEVContext.TblUsersModels' is null!");
             }
 
-            var userInfo = _context.TblUsersModels.Where(user => user.DeleteFlag != false && user.Email == email).FirstOrDefault();
+
+            var userInfo = _context.TblUsersModels.Where(user => !user.DeleteFlag && user.Email == email).FirstOrDefault();
 
             if (userInfo == null)
             {
@@ -253,49 +292,14 @@ namespace API_PCC.Controllers
                         filepath = userTbl.FilePath.Replace(" ", "%20");
                     }
                     string fullname = userTbl.Fname + ", " + userTbl.Mname + ", " + userTbl.Lname;
-                    string user_insert = $@"INSERT INTO [dbo].[tbl_UsersModel]
-                                           ([Username]
-                                           ,[Password]
-                                           ,[Fullname]
-                                           ,[Fname]
-                                           ,[Lname]
-                                           ,[Mname]
-                                           ,[Email]
-                                           ,[Gender]
-                                           ,[EmployeeID]
-                                           ,[JWToken]
-                                           ,[FilePath]
-                                           ,[Active]
-                                           ,[Cno]
-                                           ,[Address]
-                                           ,[Status]
-                                           ,[Date_Created]
-                                           ,[CenterId]
-                                           ,[AgreementStatus]
-                                           ,[Delete_Flag])
-                                     VALUES
-                                           ('" + userTbl.Username + "'" +
-                                            ",'" + Cryptography.Encrypt(userTbl.Password) + "'," +
-                                           "'" + fullname + "'," +
-                                           "'" + userTbl.Fname + "'," +
-                                           "'" + userTbl.Lname + "'," +
-                                           "'" + userTbl.Mname + "'," +
-                                           "'" + userTbl.Email + "'," +
-                                           "'" + userTbl.Gender + "'," +
-                                           "'" + userTbl.EmployeeId + "'," +
-                                           "'" + string.Concat(strtokenresult.TakeLast(15)) + "'," +
-                                           "'" + filepath + "'," +
-                                           "'1'," +
-                                           "'" + userTbl.Cno + "'," +
-                                           "'" + userTbl.Address + "'," +
-                                           "'6'," +
-                                           "'" + DateTime.Now.ToString("yyyy-MM-dd") + "'," +
-                                           "'" + userTbl.CenterId + "'," +
-                                           "'" + userTbl.AgreementStatus + "'," +
-                                           "'0')";
-                    db.DB_WithParam(user_insert);
 
+                    var userModel = buildUserModel(userTbl, fullname, strtokenresult);
+                    populateUserAccess(userModel, userTbl);
 
+                    _context.TblUsersModels.Add(userModel);
+
+                    await _context.SaveChangesAsync();  
+                    
                     const string chars = "0123456789";
                     Random random_OTP = new Random();
                     string otp_res = "";
@@ -335,6 +339,63 @@ namespace API_PCC.Controllers
             return Ok(result);
         }
 
+        private TblUsersModel buildUserModel(RegistrationModel registrationModel, string fullName, string strtokenresult)
+        {
+            var userModel = new TblUsersModel()
+            {
+                Username = registrationModel.Username,
+                Password = Cryptography.Encrypt(registrationModel.Password),
+                Fullname = fullName,
+                Fname = registrationModel.Fname,
+                Lname = registrationModel.Lname,
+                Mname = registrationModel.Mname,
+                Email = registrationModel.Email,
+                Gender = registrationModel.Gender,
+                EmployeeId = registrationModel.EmployeeId,
+                Jwtoken = string.Concat(strtokenresult.TakeLast(15)),
+                FilePath = registrationModel.FilePath,
+                Active = 1,
+                Cno = registrationModel.Cno,
+                Address = registrationModel.Address,  
+                Status = registrationModel.Status,
+                DateCreated = DateTime.Now,
+                CenterId = registrationModel.CenterId,
+                AgreementStatus = registrationModel.AgreementStatus,
+                DeleteFlag = false
+            };
+            return userModel;
+        }
+
+        private void populateUserAccess(TblUsersModel usersModel, RegistrationModel registrationModel)
+        {
+            var userAccessModels = new List<UserAccessModel>();
+
+            foreach(var access in registrationModel.userAccess)
+            {
+                var userAccessTypeList = new List<UserAccessType>();
+                foreach (int userAccess in access.Value)
+                {
+                    var userAccessType = new UserAccessType()
+                    {
+                        Code = userAccess
+                    };
+                    _context.Attach(userAccessType);
+
+                    userAccessTypeList.Add(userAccessType);
+                }
+
+                var userAccessModel = new UserAccessModel()
+                {
+                    module = access.Key
+                };
+
+                _context.Attach(userAccessModel);
+
+                userAccessModel.userAccess.AddRange(userAccessTypeList);
+                userAccessModels.Add(userAccessModel);
+            }
+            usersModel.userAccessModels.AddRange(userAccessModels);
+        }
 
         // POST: user/rememberPassword
         [HttpPost]

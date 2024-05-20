@@ -20,42 +20,6 @@ namespace API_PCC.Manager
         private readonly PCC_DEVContext _context;
         #region Models
 
-        public partial class RegistrationModel
-        {
-            public string Username { get; set; }
-
-            public string Password { get; set; }
-
-            public string Fname { get; set; }
-
-            public string? Lname { get; set; }
-
-            public string? Mname { get; set; }
-
-            public string Email { get; set; }
-
-            public string Gender { get; set; }
-
-            public string? EmployeeId { get; set; }
-
-            public string Jwtoken { get; set; }
-
-            public string? FilePath { get; set; }
-
-            public int? Active { get; set; }
-
-            public string? Cno { get; set; }
-
-            public string? Address { get; set; }
-
-            public int? Status { get; set; }
-            public string? CreatedBy { get; set; }
-
-            public int? CenterId { get; set; }
-
-            public bool? AgreementStatus { get; set; }
-        }
-
         #endregion
 
         public StatusReturns GetUserLogIn(string username, string password, string? ipaddress, string? location)
