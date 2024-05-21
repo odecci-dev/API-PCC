@@ -9,9 +9,9 @@
         public int HerdSize { get; set; }
         public string FarmManager { get; set; }
         public string HerdCode { get; set; }
-        public string BreedTypeCode { get; set; }
+        public List<string> BreedTypeCodeList { get; set; } = new List<String>();
         public string FarmAffilCode { get; set; }
-        public string FeedingSystemCode { get; set; }
+        public List<string> FeedingSystemCodeList { get; set; } = new List<String>();
         public string FarmAddress { get; set; }
         public Owner Owner { get; set; }
         public int Status { get; set; }
