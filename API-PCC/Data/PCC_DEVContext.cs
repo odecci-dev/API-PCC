@@ -65,6 +65,10 @@ public partial class PCC_DEVContext : DbContext
 
     public virtual DbSet<BuffHerdJoinTable> HerdJoinTables { get; set; }
 
+    public virtual DbSet<UserAccessModel> userAccessModels { get; set; }
+
+    public virtual DbSet<UserAccessType> userAccessTypes { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +81,17 @@ public partial class PCC_DEVContext : DbContext
             .HasMany(e => e.feedingSystem)
             .WithMany(e => e.buffHerd)
             .UsingEntity<BuffHerdJoinTable>();
+
+        modelBuilder.Entity<TblUsersModel>()
+            .HasMany(e => e.userAccessModels)
+            .WithOne(e => e.userModel)
+            .HasForeignKey(e => e.userModelId);
+
+        modelBuilder.Entity<UserAccessModel>()
+            .HasMany(e => e.userAccess)
+            .WithOne(e => e.accessModel)
+            .HasForeignKey(e => e.userAccessModelId);
+
 
         modelBuilder.Entity<BuffHerdJoinTable>(entity =>
         {
@@ -92,6 +107,26 @@ public partial class PCC_DEVContext : DbContext
                   .HasColumnName("Buff_Herd_Id");
             entity.Property(e => e.FeedingSystemId)
                  .HasColumnName("Feeding_System_Id");
+        });
+
+        modelBuilder.Entity<UserAccessModel>(entity =>
+        {
+            entity.ToTable("tbl_UserAccessModel");
+
+            entity.HasKey(e => e.id).HasName("PK_tbl_UserAccessModel");
+
+            entity.Property(e => e.module);
+
+
+        });
+
+        modelBuilder.Entity<UserAccessType>(entity =>
+        {
+            entity.ToTable("tbl_UserAccessType");
+
+            entity.HasKey(e => e.Id).HasName("PK_tbl_UserAccessType");
+
+            entity.Property(e => e.Code);
         });
 
         modelBuilder.Entity<ABirthType>(entity =>

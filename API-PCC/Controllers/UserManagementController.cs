@@ -1,14 +1,19 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using NuGet.Packaging;
+using NuGet.Protocol.Core.Types;
 using System.Data;
 using System.Data.SqlClient;
+using static API_PCC.Controllers.UserController;
 
 namespace API_PCC.Controllers
 {
@@ -30,13 +35,14 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildUserPagedModel(searchFilter, queryResult);
+                var filter = new Dictionary<string, object>();
+                filter.Add("searchParam", searchFilter.searchParam);
+                List<TblUsersModel> userList = await buildUserManagementSearchQuery(filter).ToListAsync();
+                var result = buildUserPagedModel(searchFilter, userList);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-
                 return Problem(ex.GetBaseException().ToString());
             }
         }
@@ -46,8 +52,10 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserForApprovalSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildUserPagedModel(searchFilter, queryResult);
+                var filter = new Dictionary<string, object>();
+                filter.Add("forApproval", true);
+                List<TblUsersModel> userList = await buildUserManagementSearchQuery(filter).ToListAsync();
+                var result = buildUserPagedModel(searchFilter, userList);
                 return Ok(result);
             }
 
@@ -64,13 +72,16 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQuery(), null, populateSqlParameters(username));
-                if (queryResult.Rows.Count == 0)
+                var filter = new Dictionary<string, object>();
+                filter.Add("username", username);
+                List<TblUsersModel> userList = await buildUserManagementSearchQuery(filter).ToListAsync();
+
+                if (userList.Count == 0)
                 {
                     return Conflict("No records found!");
                 }
-                var userModels = convertDataRowToUserList(queryResult.AsEnumerable().ToList());
-                List<UserResponseModel> userResponseModels = convertUserListToResponseModelList(userModels);
+
+                List<UserResponseModel> userResponseModels = convertUserListToResponseModelList(userList);
 
                 return Ok(userResponseModels);
             }
@@ -85,9 +96,12 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, UserUpdateModel userUpdateModel)
         {
-            DataTable userRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQueryById(), null, populateSqlParameters(id));
+            //DataTable userRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQueryById(), null, populateSqlParameters(id));
+            var filter = new Dictionary<string, object>();
+            filter.Add("Id", id);
+            var userModel = await buildUserManagementSearchQuery(filter).FirstOrDefaultAsync();
 
-            if (userRecord.Rows.Count == 0)
+            if (userModel == null)
             {
                 return Conflict("No records matched!");
             }
@@ -100,11 +114,11 @@ namespace API_PCC.Controllers
                 return Conflict("Entity already exists");
             }
 
-            var userModel = convertDataRowToUser(userRecord.Rows[0]);
-
             try
             {
+                userModel.userAccessModels.Clear();
                 populateUser(userModel, userUpdateModel);
+                populateUserAccess(userModel, userUpdateModel);
                 _context.Entry(userModel).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
@@ -116,6 +130,51 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
+
+        // GET: usermanagement/useraccess/list/{username}
+        [HttpGet]
+        [Route("/UserManagement/useraccess/list/{username}")]
+        public async Task<IActionResult> list(string username)
+        {
+            var userModel = await _context.TblUsersModels
+                .Include(user => user.userAccessModels)
+                .ThenInclude(userAccessModel => userAccessModel.userAccess)
+                .Where(user => user.Username.Equals(username))
+                .FirstOrDefaultAsync();
+
+            if (userModel == null)
+            {
+                return Problem("Username does not exists!");
+            }
+
+            var userAccessListModel = populateUserAccessListModel(userModel);
+            return Ok(userAccessListModel);
+        }
+
+        // GET: usermanagement/useraccess/update/{username}
+        [HttpPut]
+        [Route("/UserManagement/useraccess/update/{username}")]
+        public async Task<IActionResult> update(string username, UserAccessListModel userAccessListModel)
+        {
+            var userModel = await _context.TblUsersModels
+                .Include(user => user.userAccessModels)
+                .ThenInclude(userAccessModel => userAccessModel.userAccess)
+                .Where(user => user.Username.Equals(username))
+                .FirstOrDefaultAsync();
+
+            if (userModel == null)
+            {
+                return Problem("Username does not exists!");
+            }
+
+            userModel.userAccessModels.Clear();
+            userModel.userAccessModels.AddRange(populateUserAccessList(userAccessListModel.userAccessList));
+            _context.Entry(userModel).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return Ok("Update Successful!");
+        }
+
 
         private void populateUser(TblUsersModel userModel, UserUpdateModel userUpdateModel)
         {
@@ -133,7 +192,7 @@ namespace API_PCC.Controllers
             userModel.Address = userUpdateModel.Address;
             userModel.CenterId = userUpdateModel.CenterId;
             userModel.AgreementStatus = userUpdateModel.AgreementStatus;
-    }
+        }
 
         // POST: UserManagement/delete/5
         [HttpPost]
@@ -166,7 +225,7 @@ namespace API_PCC.Controllers
             }
         }
 
-        // POST: UserManagemetn/restore/
+        // POST: UserManagement/restore/
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
@@ -298,19 +357,17 @@ namespace API_PCC.Controllers
             return sqlParameters.ToArray();
         }
 
-        private List<UserPagedModel> buildUserPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
+        private List<UserPagedModel> buildUserPagedModel(CommonSearchFilterModel searchFilter, List<TblUsersModel> userList)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
             var items = (dynamic)null;
 
-            int totalItems = dt.Rows.Count;
+            int totalItems = userList.Count;
             int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
+            items = userList.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
-
-            var userModels = convertDataRowToUserList(items);
-            List<UserResponseModel> userResponseModels = convertUserListToResponseModelList(userModels);
+            List<UserResponseModel> userResponseModels = convertUserListToResponseModelList(userList);
 
             var result = new List<UserPagedModel>();
             var item = new UserPagedModel();
@@ -356,6 +413,17 @@ namespace API_PCC.Controllers
 
             foreach (TblUsersModel user in userList)
             {
+                var userAccessModelListResponse = new Dictionary<string, List<int>>();
+                foreach (UserAccessModel userAccessModel in user.userAccessModels)
+                {
+                    var userAccessTypes = new List<int>();
+                    foreach (UserAccessType userAccessType in userAccessModel.userAccess)
+                    {
+                        userAccessTypes.Add(userAccessType.Code);
+                    }
+                    userAccessModelListResponse.TryAdd(userAccessModel.module, userAccessTypes);
+                }
+
                 var userResponseModel = new UserResponseModel()
                 {
                     Id= user.Id,
@@ -372,13 +440,114 @@ namespace API_PCC.Controllers
                     Cno = user.Cno,
                     Address = user.Address,
                     CenterId = user.CenterId,
-                    AgreementStatus = user.AgreementStatus
+                    AgreementStatus = user.AgreementStatus,
+                    userAccessList = userAccessModelListResponse
                 };
                 userResponseModels.Add(userResponseModel);
             }
 
             return userResponseModels;
         }
+        private IQueryable<TblUsersModel> buildUserManagementSearchQuery(Dictionary<string, object> filter)
+        {
+            IQueryable<TblUsersModel> query = _context.TblUsersModels;
 
+            query = query
+                .Include(user => user.userAccessModels)
+                .ThenInclude(userAccessModel => userAccessModel.userAccess)
+                .Where(user => !user.DeleteFlag);
+                
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (filter.ContainsKey("searchParam"))
+            {
+                var searchParam = filter["searchParam"].ToString();
+                query = query.Where(user =>
+                               user.Fname.Contains(searchParam) ||
+                               user.Lname.Contains(searchParam) ||
+                               user.Mname.Contains(searchParam) ||
+                               user.Email.Contains(searchParam));
+            }
+
+            if (filter.ContainsKey("forApproval") && Convert.ToBoolean(filter["forApproval"]))
+            {
+                query = query.Where(user => user.Status.Equals(3));
+            }
+
+            if (filter.ContainsKey("username"))
+            {
+                var username = filter["username"].ToString();
+                query = query.Where(user => user.Username.Equals(username));
+            }
+
+
+            if (filter.ContainsKey("Id")) {
+                var id = filter["Id"];
+                query = query.Where(user => user.Id.Equals(id));
+            }
+
+            query = query.OrderByDescending(e => e.Id);
+
+            return query;
+        }
+
+        private UserAccessListModel populateUserAccessListModel(TblUsersModel usersModel)
+        {
+            var userAccessModels = new UserAccessListModel();
+            userAccessModels.username = usersModel.Username;
+
+            var userAccessList = new Dictionary<string, List<int>>();
+            foreach (UserAccessModel userAccessModel in usersModel.userAccessModels)
+            {
+
+                var userAccessTypeList = new List<int>();
+                foreach (UserAccessType userAccessType in userAccessModel.userAccess)
+                {
+                    userAccessTypeList.Add(userAccessType.Code);
+                }
+
+                userAccessList.Add(userAccessModel.module, userAccessTypeList);
+            }
+
+            userAccessModels.userAccessList = userAccessList;
+            return userAccessModels;
+        }
+
+        private void populateUserAccess(TblUsersModel userModel, UserUpdateModel updateModel)
+        {
+            userModel.userAccessModels.AddRange(populateUserAccessList(updateModel.userAccess));
+        }
+
+        private List<UserAccessModel> populateUserAccessList(Dictionary<string, List<int>> userAccessModelList)
+        {
+            var userAccessModels = new List<UserAccessModel>();
+
+            foreach (var access in userAccessModelList)
+            {
+                var userAccessTypeList = new List<UserAccessType>();
+                foreach (int userAccess in access.Value)
+                {
+                    var userAccessType = new UserAccessType()
+                    {
+                        Code = userAccess
+                    };
+                    _context.Attach(userAccessType);
+
+                    userAccessTypeList.Add(userAccessType);
+                }
+
+                var userAccessModel = new UserAccessModel()
+                {
+                    module = access.Key
+                };
+
+                _context.Attach(userAccessModel);
+
+                userAccessModel.userAccess.AddRange(userAccessTypeList);
+                userAccessModels.Add(userAccessModel);
+            }
+            return userAccessModels;
+        }
     }
 }

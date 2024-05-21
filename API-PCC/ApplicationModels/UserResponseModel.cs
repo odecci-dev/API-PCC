@@ -17,5 +17,6 @@
         public int? Id { get; set; }
         public string? FilePath { get; set; }
         public bool? AgreementStatus { get; set; }
+        public Dictionary<string, List<int>> userAccessList { get; set;}
     }
 }

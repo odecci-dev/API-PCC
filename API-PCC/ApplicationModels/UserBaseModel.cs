@@ -16,5 +16,6 @@
         public string Address { get; set; }
         public int? CenterId { get; set; }
         public bool? AgreementStatus { get; set; }
+        public Dictionary<string, List<int>>? userAccess { get; set; }
     }
 }
