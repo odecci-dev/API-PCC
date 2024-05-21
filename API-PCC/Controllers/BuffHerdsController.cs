@@ -108,16 +108,17 @@ namespace API_PCC.Controllers
         [HttpGet("{herdCode}")]
         public async Task<ActionResult<BuffHerdViewResponseModel>> view(String herdCode)
         {
-            DataTable dt = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdViewQuery(), null, populateSqlParameters(herdCode));
+            var buffHerdModel = await _context.HBuffHerds
+                .Include(herd => herd.buffaloType)
+                .Include(herd => herd.feedingSystem)
+                .Where(herd => !herd.DeleteFlag && herd.HerdCode.Equals(herdCode))
+                .FirstOrDefaultAsync();
 
-            if (dt.Rows.Count == 0)
+            if (buffHerdModel == null)
             {
                 return Conflict("No records found!");
             }
-            var buffHerdModel = convertDataRowToHerdModel(dt.Rows[0]);
             var viewResponseModel = populateViewResponseModel(buffHerdModel);
-
-            
             return Ok(viewResponseModel);
         }
 
@@ -850,9 +851,7 @@ namespace API_PCC.Controllers
                 HerdSize = buffHerd.HerdSize,
                 FarmManager = buffHerd.FarmManager,
                 HerdCode = buffHerd.HerdCode,
-                //BreedTypeCode = buffHerd.BreedTypeCode,
                 FarmAffilCode = buffHerd.FarmAffilCode,
-                //FeedingSystemCode = buffHerd.FeedingSystemCode,
                 FarmAddress = buffHerd.FarmAddress,
                 Owner = populateOwner(buffHerd.Owner),
                 Status = buffHerd.Status,
@@ -869,6 +868,21 @@ namespace API_PCC.Controllers
                 DateRestored = buffHerd.DateRestored,
                 RestoredBy = buffHerd.RestoredBy
             };
+
+            var buffaloTypeList = new List<string>();
+            var feedingSystemList = new List<string>();
+            foreach (HBuffaloType buffaloType in buffHerd.buffaloType)
+            {
+                buffaloTypeList.Add(buffaloType.BreedTypeCode);
+            }
+
+            foreach (HFeedingSystem feedingSystem in buffHerd.feedingSystem)
+            {
+                feedingSystemList.Add(feedingSystem.FeedingSystemCode);
+            }
+
+            viewResponseModel.BreedTypeCodeList.AddRange(buffaloTypeList);
+            viewResponseModel.FeedingSystemCodeList.AddRange(feedingSystemList);
             return viewResponseModel;
         }
 
