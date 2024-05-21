@@ -131,6 +131,51 @@ namespace API_PCC.Controllers
             }
         }
 
+        // GET: usermanagement/useraccess/list/{username}
+        [HttpGet]
+        [Route("/UserManagement/useraccess/list/{username}")]
+        public async Task<IActionResult> list(string username)
+        {
+            var userModel = await _context.TblUsersModels
+                .Include(user => user.userAccessModels)
+                .ThenInclude(userAccessModel => userAccessModel.userAccess)
+                .Where(user => user.Username.Equals(username))
+                .FirstOrDefaultAsync();
+
+            if (userModel == null)
+            {
+                return Problem("Username does not exists!");
+            }
+
+            var userAccessListModel = populateUserAccessListModel(userModel);
+            return Ok(userAccessListModel);
+        }
+
+        // GET: usermanagement/useraccess/update/{username}
+        [HttpPut]
+        [Route("/UserManagement/useraccess/update/{username}")]
+        public async Task<IActionResult> update(string username, UserAccessListModel userAccessListModel)
+        {
+            var userModel = await _context.TblUsersModels
+                .Include(user => user.userAccessModels)
+                .ThenInclude(userAccessModel => userAccessModel.userAccess)
+                .Where(user => user.Username.Equals(username))
+                .FirstOrDefaultAsync();
+
+            if (userModel == null)
+            {
+                return Problem("Username does not exists!");
+            }
+
+            userModel.userAccessModels.Clear();
+            userModel.userAccessModels.AddRange(populateUserAccessList(userAccessListModel.userAccessList));
+            _context.Entry(userModel).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            return Ok("Update Successful!");
+        }
+
+
         private void populateUser(TblUsersModel userModel, UserUpdateModel userUpdateModel)
         {
             userModel.Username = userUpdateModel.Username;
@@ -148,38 +193,6 @@ namespace API_PCC.Controllers
             userModel.CenterId = userUpdateModel.CenterId;
             userModel.AgreementStatus = userUpdateModel.AgreementStatus;
         }
-
-        private void populateUserAccess(TblUsersModel userModel, UserUpdateModel updateModel)
-        {
-            var userAccessModels = new List<UserAccessModel>();
-
-            foreach (var access in updateModel.userAccess)
-            {
-                var userAccessTypeList = new List<UserAccessType>();
-                foreach (int userAccess in access.Value)
-                {
-                    var userAccessType = new UserAccessType()
-                    {
-                        Code = userAccess
-                    };
-                    _context.Attach(userAccessType);
-
-                    userAccessTypeList.Add(userAccessType);
-                }
-
-                var userAccessModel = new UserAccessModel()
-                {
-                    module = access.Key
-                };
-
-                _context.Attach(userAccessModel);
-
-                userAccessModel.userAccess.AddRange(userAccessTypeList);
-                userAccessModels.Add(userAccessModel);
-            }
-            userModel.userAccessModels.AddRange(userAccessModels);
-        }
-
 
         // POST: UserManagement/delete/5
         [HttpPost]
@@ -212,7 +225,7 @@ namespace API_PCC.Controllers
             }
         }
 
-        // POST: UserManagemetn/restore/
+        // POST: UserManagement/restore/
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
@@ -479,6 +492,62 @@ namespace API_PCC.Controllers
             return query;
         }
 
+        private UserAccessListModel populateUserAccessListModel(TblUsersModel usersModel)
+        {
+            var userAccessModels = new UserAccessListModel();
+            userAccessModels.username = usersModel.Username;
 
+            var userAccessList = new Dictionary<string, List<int>>();
+            foreach (UserAccessModel userAccessModel in usersModel.userAccessModels)
+            {
+
+                var userAccessTypeList = new List<int>();
+                foreach (UserAccessType userAccessType in userAccessModel.userAccess)
+                {
+                    userAccessTypeList.Add(userAccessType.Code);
+                }
+
+                userAccessList.Add(userAccessModel.module, userAccessTypeList);
+            }
+
+            userAccessModels.userAccessList = userAccessList;
+            return userAccessModels;
+        }
+
+        private void populateUserAccess(TblUsersModel userModel, UserUpdateModel updateModel)
+        {
+            userModel.userAccessModels.AddRange(populateUserAccessList(updateModel.userAccess));
+        }
+
+        private List<UserAccessModel> populateUserAccessList(Dictionary<string, List<int>> userAccessModelList)
+        {
+            var userAccessModels = new List<UserAccessModel>();
+
+            foreach (var access in userAccessModelList)
+            {
+                var userAccessTypeList = new List<UserAccessType>();
+                foreach (int userAccess in access.Value)
+                {
+                    var userAccessType = new UserAccessType()
+                    {
+                        Code = userAccess
+                    };
+                    _context.Attach(userAccessType);
+
+                    userAccessTypeList.Add(userAccessType);
+                }
+
+                var userAccessModel = new UserAccessModel()
+                {
+                    module = access.Key
+                };
+
+                _context.Attach(userAccessModel);
+
+                userAccessModel.userAccess.AddRange(userAccessTypeList);
+                userAccessModels.Add(userAccessModel);
+            }
+            return userAccessModels;
+        }
     }
 }
