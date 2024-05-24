@@ -32,4 +32,7 @@ public partial class ABloodComp
     public DateTime? DateRestored { get; set; }
 
     public string RestoredBy { get; set; }
+
+    public double From { get; set; }
+    public double To { get; set; }
 }

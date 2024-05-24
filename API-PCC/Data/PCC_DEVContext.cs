@@ -68,6 +68,7 @@ public partial class PCC_DEVContext : DbContext
     public virtual DbSet<UserAccessModel> userAccessModels { get; set; }
 
     public virtual DbSet<UserAccessType> userAccessTypes { get; set; }
+    public virtual DbSet<TblBLoodCalculator> bloodCalculators { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -195,14 +196,12 @@ public partial class PCC_DEVContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("Status");
             entity.Property(e => e.CreatedBy)
-                .IsRequired()
                 .IsUnicode(false)
                 .HasColumnName("Created_By");
             entity.Property(e => e.DateCreated)
                 .HasColumnType("date")
                 .HasColumnName("Date_Created");
             entity.Property(e => e.UpdatedBy)
-                .IsRequired()
                 .IsUnicode(false)
                 .HasColumnName("Updated_By");
             entity.Property(e => e.DateUpdated)
@@ -221,6 +220,12 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
+            entity.Property(e => e.From)
+                .IsUnicode(false)
+                .HasColumnName("From");
+            entity.Property(e => e.To)
+                .IsUnicode(false)
+                .HasColumnName("To");
         });
 
         modelBuilder.Entity<ABreed>(entity =>
@@ -1118,6 +1123,21 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
+        });
+
+        modelBuilder.Entity<TblBLoodCalculator>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_tbl_bloodCalculator");
+            entity.ToTable("tbl_BloodCalculator");
+
+            entity.Property(e => e.Id)
+                .HasColumnName("Id");
+            entity.Property(e => e.Name)
+                .HasColumnName("Name");
+            entity.Property(e => e.Criteria)
+                .HasColumnName("Criteria");
+            entity.Property(e => e.Formula)
+                .HasColumnName("Formula");
         });
 
         OnModelCreatingGeneratedProcedures(modelBuilder);
