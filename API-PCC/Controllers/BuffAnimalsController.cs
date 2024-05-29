@@ -13,6 +13,11 @@ using NuGet.Protocol.Core.Types;
 using System;
 using API_PCC.EntityModels;
 using System.Data.SqlClient;
+using static API_PCC.Controllers.UserController;
+using AngouriMath.Extensions;
+using Microsoft.IdentityModel.Tokens;
+using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
 
 namespace API_PCC.Controllers
 {
@@ -119,9 +124,9 @@ namespace API_PCC.Controllers
             }
 
             string sire_update = $@"UPDATE [dbo].[tbl_SireModel] SET 
-                                             [Sire_Registration_Number] = '" + updateModel.Sire.SireRegistrationNumber + "'" +
-                                            ",[Sire_Id_Number] = '" + updateModel.Sire.SireIdNumber + "'" +
-                                            ",[Sire_Name] = '" + updateModel.Sire.SireName + "'" +
+                                             [Sire_Registration_Number] = '" + updateModel.Sire.RegistrationNumber + "'" +
+                                            ",[Sire_Id_Number] = '" + updateModel.Sire.IdNumber + "'" +
+                                            ",[Sire_Name] = '" + updateModel.Sire.Name + "'" +
                                             ",[Breed_Code] = '" + updateModel.Sire.BreedCode + "'" +
                                             ",[Blood_Code] = '" + updateModel.Sire.BloodCode + "'" +
                                             " WHERE id = " + buffAnimal.SireId;
@@ -135,9 +140,9 @@ namespace API_PCC.Controllers
             }
 
             string dam_update = $@"UPDATE [dbo].[tbl_DamModel] SET 
-                                             [Dam_Registration_Number] = '" + updateModel.Dam.DamRegistrationNumber + "'" +
-                                            ",[Dam_Id_Number] = '" + updateModel.Dam.DamIdNumber + "'" +
-                                            ",[Dam_Name] = '" + updateModel.Dam.DamName + "'" +
+                                             [Dam_Registration_Number] = '" + updateModel.Dam.RegistrationNumber + "'" +
+                                            ",[Dam_Id_Number] = '" + updateModel.Dam.IdNumber + "'" +
+                                            ",[Dam_Name] = '" + updateModel.Dam.Name + "'" +
                                             ",[Breed_Code] = '" + updateModel.Dam.BreedCode + "'" +
                                             ",[Blood_Code] = '" + updateModel.Dam.BloodCode + "'" +
                                             " WHERE id = " + buffAnimal.DamId;
@@ -183,88 +188,69 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<ABuffAnimal>> save(BuffAnimalRegistrationModel buffAnimalRegistrationModel)
         {
+            if (_context.ABuffAnimals == null)
+            {
+                return Problem("Buff Animal entity Set is null!");
+            }
+
             try
             {
+                var duplicateRecordCheck = _context.ABuffAnimals
+                                            .Where(buffAnimal => !buffAnimal.DeleteFlag &&
+                                                   buffAnimal.HerdCode.Equals(buffAnimalRegistrationModel.HerdCode) &&
+                                                   buffAnimal.AnimalIdNumber.Equals(buffAnimalRegistrationModel.AnimalIdNumber))
+                                            .FirstOrDefault();
 
-                DataTable duplicateCheck = db.SelectDb(QueryBuilder.buildBuffAnimalDuplicateQuery(buffAnimalRegistrationModel)).Tables[0];
-
-                if (duplicateCheck.Rows.Count > 0)
+                if (duplicateRecordCheck != null)
                 {
                     return Conflict("Buff Animal already exists");
                 }
 
                 var buffAnimal = buildBuffAnimal(buffAnimalRegistrationModel);
 
-                DataTable sireRecordsCheck = db.SelectDb(QueryBuilder.buildSireSearchQueryBySire(buffAnimalRegistrationModel)).Tables[0];
+                var sireRecord = animalRecordCheck(buffAnimalRegistrationModel.Sire);
 
-                if (sireRecordsCheck.Rows.Count == 0)
+                if (sireRecord == null)
                 {
-                    string sire_insert = $@"INSERT INTO [dbo].[tbl_SireModel] 
-                                            ([Sire_Registration_Number]
-                                           ,[Sire_Id_Number]
-                                           ,[Sire_Name]
-                                           ,[Breed_Code]
-                                           ,[Blood_Code])
-                                      VALUES
-                                            ('" + buffAnimalRegistrationModel.Sire.SireRegistrationNumber + "'," +
-                                                "'" + buffAnimalRegistrationModel.Sire.SireIdNumber + "'," +
-                                                "'" + buffAnimalRegistrationModel.Sire.SireName + "'," +
-                                                "'" + buffAnimalRegistrationModel.Sire.BreedCode + "'," +
-                                                "'" + buffAnimalRegistrationModel.Sire.BloodCode + "')";
-                    string sireInsertResult = db.DB_WithParam(sire_insert);
-
+                    var sire = buildBuffAnimal(buffAnimalRegistrationModel.Sire);
+                    var sireModel = _context.ABuffAnimals.Add(sire);
+                    sireRecord = sireModel.Entity;
                 }
 
-                DataTable damRecordsCheck = db.SelectDb(QueryBuilder.buildDamSearchQueryByRegNumIdNumName(buffAnimalRegistrationModel)).Tables[0];
+                var damRecord = animalRecordCheck(buffAnimalRegistrationModel.Dam);
 
-                if (damRecordsCheck.Rows.Count == 0)
+                if (damRecord == null)
                 {
-                    string dam_insert = $@"INSERT INTO [dbo].[tbl_DamModel] 
-                                            ([Dam_Registration_Number]
-                                           ,[Dam_Id_Number]
-                                           ,[Dam_Name]
-                                           ,[Breed_Code]
-                                           ,[Blood_Code])
-                                      VALUES
-                                            ('" + buffAnimalRegistrationModel.Dam.DamRegistrationNumber + "'," +
-                                                "'" + buffAnimalRegistrationModel.Dam.DamIdNumber + "'," +
-                                                "'" + buffAnimalRegistrationModel.Dam.DamName + "'," +
-                                                "'" + buffAnimalRegistrationModel.Dam.BreedCode + "'," +
-                                                "'" + buffAnimalRegistrationModel.Dam.BloodCode + "')";
-                    string damInsertResult = db.DB_WithParam(dam_insert);
+                    var dam = buildBuffAnimal(buffAnimalRegistrationModel.Dam);
+                    var damModel = _context.ABuffAnimals.Add(dam);
+                    damRecord = damModel.Entity;
                 }
 
-                DataTable originOfAcquisition = db.SelectDb(QueryBuilder.buildOriginAcquisitionSearchQueryByOriginAcquistion(buffAnimalRegistrationModel)).Tables[0];
 
-                if (originOfAcquisition.Rows.Count == 0)
+                var originOfAcquisitionRecord = originOfAcquistionRecordCheck(buffAnimalRegistrationModel.OriginOfAcquisition);
+
+                if (originOfAcquisitionRecord == null)
                 {
-                    string origin_of_acquisition_insert = $@"INSERT INTO [dbo].[tbl_OriginOfAcquisitionModel] 
-                                            ([City]
-                                           ,[Province]
-                                           ,[Barangay]
-                                           ,[Region])
-                                      VALUES
-                                            ('" + buffAnimalRegistrationModel.OriginOfAcquisition.City + "'," +
-                                                "'" + buffAnimalRegistrationModel.OriginOfAcquisition.Province + "'," +
-                                                "'" + buffAnimalRegistrationModel.OriginOfAcquisition.Barangay + "'," +
-                                                "'" + buffAnimalRegistrationModel.OriginOfAcquisition.Region + "')";
-                    string originOfAcquistionResult = db.DB_WithParam(origin_of_acquisition_insert);
+                    var originOfAcquistion = buildOriginOfAcquistion(buffAnimalRegistrationModel.OriginOfAcquisition);
+
+                    var originOfAcquistionModel = _context.OriginOfAcquisitionModels.Add(originOfAcquistion);
+                    originOfAcquisitionRecord = originOfAcquistionModel.Entity;
                 }
 
-                DataTable sireRecords = db.SelectDb(QueryBuilder.buildSireSearchQueryBySire(buffAnimalRegistrationModel)).Tables[0];
-                DataTable damRecords = db.SelectDb(QueryBuilder.buildDamSearchQueryByRegNumIdNumName(buffAnimalRegistrationModel)).Tables[0];
-                DataTable originOfAcquistionRecords = db.SelectDb(QueryBuilder.buildOriginAcquisitionSearchQueryByOriginAcquistion(buffAnimalRegistrationModel)).Tables[0];
-
-                var sireRecord = convertDataRowToSireModel(sireRecords.Rows[0]);
-                var damRecord = convertDataRowToDamModel(damRecords.Rows[0]);
-                var originOfAcquistionRecord = convertDataRowToOriginAcquistionModel(originOfAcquistionRecords.Rows[0]);
+                await _context.SaveChangesAsync();
 
                 buffAnimal.SireId = sireRecord.Id;
                 buffAnimal.DamId = damRecord.Id;
-                buffAnimal.OriginOfAcquisition = originOfAcquistionRecord.Id;
+                buffAnimal.OriginOfAcquisition = originOfAcquisitionRecord.Id;
                 buffAnimal.CreatedBy = buffAnimalRegistrationModel.CreatedBy;
                 buffAnimal.CreatedDate = DateTime.Now;
+                buffAnimal.BloodCode = 
                 buffAnimal.Status = "1";
+
+                var bloodCompDetails = getBloodCode(sireRecord.bloodComp, damRecord.bloodComp);
+
+                buffAnimal.bloodComp = (double) bloodCompDetails.GetValueOrDefault("bloodCompValue")!;
+                buffAnimal.BloodCode = (string) bloodCompDetails.GetValueOrDefault("bloodCompCode")!;
 
                 _context.ABuffAnimals.Add(buffAnimal);
                 await _context.SaveChangesAsync();
@@ -276,6 +262,92 @@ namespace API_PCC.Controllers
 
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private Dictionary<string, object> getBloodCode(double sire, double dam)
+        {
+            var bloodCalculators = _context.bloodCalculators.AsEnumerable().ToList();
+            string formula = "";
+            foreach (TblBLoodCalculator bloodCalculator in bloodCalculators)
+            {
+                if (bloodCalculator.Criteria.IsNullOrEmpty())
+                {
+                    continue;
+                }
+                if (filterCriteria(sire, dam, bloodCalculator.Criteria))
+                {
+                    formula = bloodCalculator.Formula;
+                    formula = formula.Replace("sire", sire.ToString());
+                    formula = formula.Replace("dam", dam.ToString());
+                    break;
+                }
+            }
+
+            var bloodCompDetails = new Dictionary<string, object>();
+
+            var bloodCompValue = (double)formula.EvalNumerical();
+
+            var bloodCompRecord = _context.ABloodComps.Where(bloodComp => bloodComp.From <= bloodCompValue && bloodComp.To >= bloodCompValue).FirstOrDefault();
+
+            bloodCompDetails.Add("bloodCompValue", bloodCompValue);
+            bloodCompDetails.Add("bloodCompCode", bloodCompRecord.BloodCode);
+
+            return bloodCompDetails;
+        }
+
+        private bool filterCriteria(double sire, double dam, string filter = null)
+        {
+
+            var sireParam = Expression.Parameter(typeof(double), "sire");
+            var damParam = Expression.Parameter(typeof(double), "dam");
+
+            // Add Filter string and parameters
+            var e = (Expression)DynamicExpressionParser.ParseLambda(new[] { sireParam, damParam }, null, filter);
+
+            // convert to Expression
+            var typedExpression = (Expression<Func<double, double, bool>>)e;
+
+            // Use as a condition
+            bool filterCheck = typedExpression.Compile().Invoke(sire, dam);
+
+            return filterCheck;
+        }
+
+        private TblOriginOfAcquisitionModel buildOriginOfAcquistion(OriginOfAcquisitionModel originOfAcquisitionModel)
+        {
+            var originOfAcquistionModel = new TblOriginOfAcquisitionModel()
+            {
+                City = originOfAcquisitionModel.City,
+                Province = originOfAcquisitionModel.Province,
+                Barangay = originOfAcquisitionModel.Barangay,
+                Region = originOfAcquisitionModel.Region
+            };
+
+            return originOfAcquistionModel;
+        }
+
+
+        private ABuffAnimal animalRecordCheck(Animal animal)
+        {
+            var animalRecord = _context.ABuffAnimals
+                                        .Where(buffAnimal => buffAnimal.RfidNumber.Equals(animal.RegistrationNumber) &&
+                                                buffAnimal.AnimalIdNumber.Equals(animal.IdNumber) &&
+                                                buffAnimal.AnimalName.Equals(animal.Name) &&
+                                                buffAnimal.BreedCode.Equals(animal.BreedCode) &&
+                                                buffAnimal.BloodCode.Equals(animal.BloodCode))
+                                        .FirstOrDefault();
+            return animalRecord;
+        }
+
+        private TblOriginOfAcquisitionModel originOfAcquistionRecordCheck(OriginOfAcquisitionModel originOfAcquisitionModel)
+        {
+            var originOfAcquisitionRecord = _context.OriginOfAcquisitionModels
+                                        .Where(originOfAcquistion => originOfAcquistion.City.Equals(originOfAcquisitionModel.City) &&
+                                                originOfAcquistion.Province.Equals(originOfAcquisitionModel.Province) &&
+                                                originOfAcquistion.Barangay.Equals(originOfAcquisitionModel.Barangay) &&
+                                                originOfAcquistion.Region.Equals(originOfAcquisitionModel.Region))
+                                        .FirstOrDefault();
+            return originOfAcquisitionRecord;
         }
 
         // POST: BuffAnimals/delete/5
@@ -409,7 +481,7 @@ namespace API_PCC.Controllers
             string Lname = farmOwner == null ? "N/A" : farmOwner.FirstName;
             var buffAnimalResponseModel = new BuffAnimalListResponseModel()
             {
-                BreedRegNo = Dam.DamRegistrationNumber,
+                BreedRegNo = Dam.RegistrationNumber,
                 HerdCode = buffAnimalEntityModel.HerdCode,
                 AnimalIdNumber = buffAnimalEntityModel.AnimalIdNumber,
                 Photo = buffAnimalEntityModel.Photo,
@@ -459,7 +531,7 @@ namespace API_PCC.Controllers
 
         }
 
-        private Sire populateSireModel(ABuffAnimal buffAnimal)
+        private Animal populateSireModel(ABuffAnimal buffAnimal)
         {
             DataTable dt = db.SelectDb(QueryBuilder.buildSireSearchQueryById(buffAnimal.SireId)).Tables[0];
             if (dt.Rows.Count == 0)
@@ -467,18 +539,18 @@ namespace API_PCC.Controllers
                 throw new Exception("Sire Record not found!");
             }
             var sireEntity = convertDataRowToSireModel(dt.Rows[0]);
-            var sireModel = new Sire()
+            var sireModel = new Animal()
             {
-                SireRegistrationNumber = sireEntity.SireRegistrationNumber,
-                SireIdNumber = sireEntity.SireIdNumber,
-                SireName = sireEntity.SireName,
+                RegistrationNumber = sireEntity.SireRegistrationNumber,
+                IdNumber = sireEntity.SireIdNumber,
+                Name = sireEntity.SireName,
                 BreedCode = sireEntity.BreedCode,
                 BloodCode = sireEntity.BloodCode
             };
             return sireModel;
         }
 
-        private Dam populateDamModel(ABuffAnimal buffAnimal)
+        private Animal populateDamModel(ABuffAnimal buffAnimal)
         {
             DataTable dt = db.SelectDb(QueryBuilder.buildDamSearchQueryById(buffAnimal.DamId)).Tables[0];
             if (dt.Rows.Count == 0)
@@ -486,11 +558,11 @@ namespace API_PCC.Controllers
                 throw new Exception("Dam Record not found!");
             }
             var damEntity = convertDataRowToDamModel(dt.Rows[0]);
-            var damModel = new Dam()
+            var damModel = new Animal()
             {
-                DamRegistrationNumber = damEntity.DamRegistrationNumber,
-                DamIdNumber = damEntity.DamIdNumber,
-                DamName = damEntity.DamName,
+                RegistrationNumber = damEntity.DamRegistrationNumber,
+                IdNumber = damEntity.DamIdNumber,
+                Name = damEntity.DamName,
                 BreedCode = damEntity.BreedCode,
                 BloodCode = damEntity.BloodCode
             };
@@ -630,12 +702,27 @@ namespace API_PCC.Controllers
                 CountryOfBirth = registrationModel.CountryOfBirth,
                 DateOfAcquisition = registrationModel.DateOfAcquisition,
                 Marking = registrationModel.Marking,
-                TypeOfOwnership = registrationModel.TypeOfOwnership,
-                BloodCode = registrationModel.BloodCode
+                TypeOfOwnership = registrationModel.TypeOfOwnership
+                // To be calculated BloodCode = registrationModel.BloodCode
             };
             return buffAnimal;
         }
 
+        private ABuffAnimal buildBuffAnimal(Animal animal)
+        {
+            var buffAnimal = new ABuffAnimal()
+            {
+                AnimalIdNumber = animal.IdNumber,
+                AnimalName = animal.Name,
+                RfidNumber = animal.RegistrationNumber,
+                BreedCode = animal.BreedCode,
+                BloodCode = animal.BloodCode,
+                bloodComp = animal.bloodComp,
+                CreatedDate = DateTime.Now
+            };
+
+            return buffAnimal;
+        }
 
         private SqlParameter[] populateSqlParameters(BuffAnimalSearchFilterModel searchFilter)
         {
