@@ -18,7 +18,8 @@
         public string Marking { get; set; }
         public string TypeOfOwnership { get; set; }
         public string BloodCode { get; set; }
-        public Sire Sire { get; set; }
-        public Dam Dam { get; set; }
+        public Animal Sire { get; set; }
+        public Animal Dam { get; set; }
+        public string bloodComp { get; set; }
     }
 }

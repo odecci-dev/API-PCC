@@ -70,6 +70,7 @@ public partial class PCC_DEVContext : DbContext
     public virtual DbSet<UserAccessType> userAccessTypes { get; set; }
     public virtual DbSet<TblBLoodCalculator> bloodCalculators { get; set; }
 
+    public virtual DbSet<TblOriginOfAcquisitionModel> OriginOfAcquisitionModels { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -332,6 +333,9 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DamId)
                 .IsUnicode(false)
                 .HasColumnName("Dam_Id");
+            entity.Property(e => e.bloodComp)
+                .IsUnicode(false)
+                .HasColumnName("Blood_Comp");
             entity.Property(e => e.DeleteFlag).HasColumnName("Delete_Flag");
             entity.Property(e => e.Status).HasColumnName("Status");
             entity.Property(e => e.CreatedBy)

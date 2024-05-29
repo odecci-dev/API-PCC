@@ -182,9 +182,9 @@ namespace API_PCC.Utils
         public static String buildSireSearchQueryBySire(BuffAnimalRegistrationModel buffAnimalRegistrationModel)
         {
             return Constants.DBQuery.SIRE_TABLE_SELECT + "WHERE " +
-                "SIRE_REGISTRATION_NUMBER = '" + buffAnimalRegistrationModel.Sire.SireRegistrationNumber + "' " +
-                "AND SIRE_ID_NUMBER = '" + buffAnimalRegistrationModel.Sire.SireIdNumber + "' " +
-                "AND SIRE_NAME = '" + buffAnimalRegistrationModel.Sire.SireName + "' " +
+                "SIRE_REGISTRATION_NUMBER = '" + buffAnimalRegistrationModel.Sire.RegistrationNumber + "' " +
+                "AND SIRE_ID_NUMBER = '" + buffAnimalRegistrationModel.Sire.IdNumber + "' " +
+                "AND SIRE_NAME = '" + buffAnimalRegistrationModel.Sire.Name + "' " +
                 "AND BREED_CODE = '" + buffAnimalRegistrationModel.Sire.BreedCode + "' " +
                 "AND BLOOD_CODE = '" + buffAnimalRegistrationModel.Sire.BloodCode + "'";
         }
@@ -197,9 +197,9 @@ namespace API_PCC.Utils
         public static String buildDamSearchQueryByRegNumIdNumName(BuffAnimalRegistrationModel buffAnimalRegistrationModel)
         {
             return Constants.DBQuery.DAM_TABLE_SELECT + "WHERE " +
-                "DAM_REGISTRATION_NUMBER = '" + buffAnimalRegistrationModel.Dam.DamRegistrationNumber + "' " +
-                "AND DAM_ID_NUMBER = '" + buffAnimalRegistrationModel.Dam.DamIdNumber + "' " +
-                "AND DAM_NAME = '" + buffAnimalRegistrationModel.Dam.DamName + "'" +
+                "DAM_REGISTRATION_NUMBER = '" + buffAnimalRegistrationModel.Dam.RegistrationNumber + "' " +
+                "AND DAM_ID_NUMBER = '" + buffAnimalRegistrationModel.Dam.IdNumber + "' " +
+                "AND DAM_NAME = '" + buffAnimalRegistrationModel.Dam.Name + "'" +
                 "AND BREED_CODE = '" + buffAnimalRegistrationModel.Dam.BreedCode + "' " +
                 "AND BLOOD_CODE = '" + buffAnimalRegistrationModel.Dam.BloodCode + "'";
         }
