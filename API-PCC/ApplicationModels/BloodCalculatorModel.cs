@@ -2,7 +2,7 @@
 {
     public class BloodCalculatorModel
     {
-        public int sire { get; set; }
-        public int dam { get; set; }
+        public string sireBreedRegistryNumber { get; set; }
+        public string damBreedRegistryNumber { get; set; }
     }
 }
