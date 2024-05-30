@@ -15,15 +15,13 @@ using System.Linq.Dynamic.Core;
 
 namespace API_PCC.Controllers
 {
-    //[Authorize("ApiKey")]
+    [Authorize("ApiKey")]
     [Route("[controller]/[action]")]
     [ApiController]
     public class BuffAnimalsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
         private readonly BloodCalculator _bloodCalculator;
-
-        DbManager db = new DbManager();
 
         public BuffAnimalsController(PCC_DEVContext context)
         {
@@ -121,15 +119,15 @@ namespace API_PCC.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BuffAnimalListResponseModel>>> view()
         {
-            try { 
-                DataTable dt = db.SelectDb(QueryBuilder.buildBuffAnimalSearchAll()).Tables[0];
+            try {
+                var buffAnimalList = _context.ABuffAnimals.Where(animal => !animal.DeleteFlag).AsEnumerable().ToList();
 
-                if (dt.Rows.Count == 0)
+                if (buffAnimalList.Count == 0)
                 {
                     return Conflict("No records found!");
                 }
 
-                var animalModelResponseList = convertDataRowListToBuffAnimalResponseModelList(dt.AsEnumerable().ToList());
+                var animalModelResponseList = convertBuffAnimalListToResponseModel(buffAnimalList);
 
                 return Ok(animalModelResponseList);
             
@@ -451,11 +449,6 @@ namespace API_PCC.Controllers
                 }
         }
 
-        private bool ABuffAnimalExists(int id)
-        {
-            return (_context.ABuffAnimals?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
-
         private List<BuffAnimalPagedModel> buildBuffAnimalPagedModel(BuffAnimalSearchFilterModel searchFilter, List<ABuffAnimal> buffAnimalList)
         {
 
@@ -526,54 +519,6 @@ namespace API_PCC.Controllers
             return buffAnimalResponseModels;
         }
 
-        private List<BuffAnimalListResponseModel> convertDataRowListToBuffAnimalResponseModelList(List<DataRow> dataRowList)
-        {
-            var buffAnimalResponseModelList = new List<BuffAnimalListResponseModel>();
-
-            foreach (DataRow row in dataRowList)
-            {
-                buffAnimalResponseModelList.Add(convertDataRowToBuffAnimalResponseModel(row));
-            }
-
-            return buffAnimalResponseModelList;
-        }
-
-        private BuffAnimalListResponseModel convertDataRowToBuffAnimalResponseModel(DataRow datarow)
-        {
-            var buffAnimalEntityModel = DataRowToObject.ToObject<ABuffAnimal>(datarow);
-            var OriginOfAcquisition = populateOriginOfAcquistionModel(buffAnimalEntityModel);
-            var Sire = populateSireModel(buffAnimalEntityModel);
-            var Dam = populateDamModel(buffAnimalEntityModel);
-            var farmOwner = populateOwnerModel(buffAnimalEntityModel.HerdCode);
-
-            string Fname = farmOwner == null ? "N/A" : farmOwner.FirstName;
-            string Lname = farmOwner == null ? "N/A" : farmOwner.FirstName;
-            var buffAnimalResponseModel = new BuffAnimalListResponseModel()
-            {
-                BreedRegNo = Dam.RegistrationNumber,
-                HerdCode = buffAnimalEntityModel.HerdCode,
-                AnimalIdNumber = buffAnimalEntityModel.AnimalIdNumber,
-                Photo = buffAnimalEntityModel.Photo,
-                Id = buffAnimalEntityModel.Id,
-                Owner = Fname + " " + Lname,
-                DateOfAcquisition = buffAnimalEntityModel.DateOfAcquisition?.ToString("yyyy-MM-dd")
-            };
-
-            return buffAnimalResponseModel;
-        }
-
-        private TblFarmOwner populateOwnerModel(string herdCode)
-        {
-            var farmOwnerModel = (dynamic)null;
-            DataTable dt = db.SelectDb(QueryBuilder.buildHerdOwnerJoinQuery(herdCode)).Tables[0];
-            if (dt.Rows.Count != 0)
-            {
-                 farmOwnerModel = convertDataRowToFarmOwnerModel(dt.Rows[0]);
-            }
-    
-            return farmOwnerModel;
-
-        }
         private OriginOfAcquisitionModel populateOriginOfAcquistionModel(ABuffAnimal buffAnimal)
         {
             var originOfAcquisition = _context.OriginOfAcquisitionModels.Where(originOfAcquistion => originOfAcquistion.Id.Equals(buffAnimal.OriginOfAcquisition)).FirstOrDefault();
@@ -592,25 +537,6 @@ namespace API_PCC.Controllers
 
         }
 
-        private Animal populateSireModel(ABuffAnimal buffAnimal)
-        {
-            DataTable dt = db.SelectDb(QueryBuilder.buildSireSearchQueryById(buffAnimal.SireId)).Tables[0];
-            if (dt.Rows.Count == 0)
-            {
-                throw new Exception("Sire Record not found!");
-            }
-            var sireEntity = convertDataRowToSireModel(dt.Rows[0]);
-            var sireModel = new Animal()
-            {
-                RegistrationNumber = sireEntity.SireRegistrationNumber,
-                IdNumber = sireEntity.SireIdNumber,
-                Name = sireEntity.SireName,
-                BreedCode = sireEntity.BreedCode,
-                BloodCode = sireEntity.BloodCode
-            };
-            return sireModel;
-        }
-
         private Animal populateAnimalModel(int id)
         {
             var buffAnimal = _context.ABuffAnimals.Where(animal => animal.Id.Equals(id)).FirstOrDefault();
@@ -627,46 +553,6 @@ namespace API_PCC.Controllers
                 BloodCode = buffAnimal.BloodCode
             };
             return sireModel;
-        }
-
-        private Animal populateDamModel(ABuffAnimal buffAnimal)
-        {
-            DataTable dt = db.SelectDb(QueryBuilder.buildDamSearchQueryById(buffAnimal.DamId)).Tables[0];
-            if (dt.Rows.Count == 0)
-            {
-                throw new Exception("Dam Record not found!");
-            }
-            var damEntity = convertDataRowToDamModel(dt.Rows[0]);
-            var damModel = new Animal()
-            {
-                RegistrationNumber = damEntity.DamRegistrationNumber,
-                IdNumber = damEntity.DamIdNumber,
-                Name = damEntity.DamName,
-                BreedCode = damEntity.BreedCode,
-                BloodCode = damEntity.BloodCode
-            };
-            return damModel;
-        }
-
-        private TblOriginOfAcquisitionModel convertDataRowToOriginAcquistionModel(DataRow dataRow) 
-        {
-            return DataRowToObject.ToObject<TblOriginOfAcquisitionModel>(dataRow);
-        }
-
-        private SireModel convertDataRowToSireModel(DataRow dataRow)
-        {
-            return DataRowToObject.ToObject<SireModel>(dataRow);
-        }
-
-        private DamModel convertDataRowToDamModel(DataRow dataRow)
-        {
-            return DataRowToObject.ToObject<DamModel>(dataRow);
-        }
-
-        private ABuffAnimal convertDataRowToBuffAnimalEntityModel(DataRow dataRow)
-        {
-            var buuffAnimalEntityModel = DataRowToObject.ToObject<ABuffAnimal>(dataRow);
-            return buuffAnimalEntityModel;
         }
 
         private BuffAnimalBaseModel convertBuffAnimalToResponseModel(ABuffAnimal buffAnimal)
@@ -695,12 +581,6 @@ namespace API_PCC.Controllers
 
             return buffAnimalResponseModel;
         }
-
-        private TblFarmOwner convertDataRowToFarmOwnerModel(DataRow dataRow)
-        {
-            return DataRowToObject.ToObject<TblFarmOwner>(dataRow);
-        }
-
 
         private ABuffAnimal populateBuffAnimal(ABuffAnimal buffAnimal, BuffAnimalUpdateModel updateModel)
         {
@@ -763,7 +643,6 @@ namespace API_PCC.Controllers
             return buffAnimal;
         }
 
-
         private ABuffAnimal buildBuffAnimal(BuffAnimalRegistrationModel registrationModel)
         {
             var buffAnimal = new ABuffAnimal()
@@ -800,74 +679,5 @@ namespace API_PCC.Controllers
 
             return buffAnimal;
         }
-
-        private SqlParameter[] populateSqlParameters(BuffAnimalSearchFilterModel searchFilter)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchValue != null && searchFilter.searchValue != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchValue ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.sex != null && searchFilter.sex != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "Sex",
-                    Value = searchFilter.sex ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.status != null && searchFilter.status != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "Status",
-                    Value = searchFilter.status ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.filterBy.BloodCode != null && searchFilter.filterBy.BloodCode != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "BloodCode",
-                    Value = searchFilter.filterBy.BloodCode ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.filterBy.BreedCode != null && searchFilter.filterBy.BreedCode != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "BreedCode",
-                    Value = searchFilter.filterBy.BreedCode ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.filterBy.TypeOfOwnership != null && searchFilter.filterBy.TypeOfOwnership != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "TypeOfOwnership",
-                    Value = searchFilter.filterBy.TypeOfOwnership ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
     }
 }
