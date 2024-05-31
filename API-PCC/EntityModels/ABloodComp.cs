@@ -33,6 +33,10 @@ public partial class ABloodComp
 
     public string RestoredBy { get; set; }
 
-    public double From { get; set; }
-    public double To { get; set; }
+    public double? From { get; set; }
+    public double? To { get; set; }
+
+    public string sireBreed { get; set; }
+
+    public string damBreed { get; set; }
 }

@@ -26,7 +26,6 @@ public partial class ABuffAnimal
     public int SireId { get; set; }
     public int DamId { get; set; }
     public string BloodCode { get; set; }
-    public double bloodComp { get; set; }
     public bool DeleteFlag { get; set; }
     public string Status { get; set; }
     public string CreatedBy { get; set; }
@@ -37,4 +36,5 @@ public partial class ABuffAnimal
     public string? DeletedBy { get; set; }
     public DateTime? DateRestored { get; set; }
     public string? RestoredBy { get; set; }
+    public string breedRegistryNumber { get; set; }
 }

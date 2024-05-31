@@ -227,6 +227,12 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.To)
                 .IsUnicode(false)
                 .HasColumnName("To");
+            entity.Property(e => e.sireBreed)
+                .IsUnicode(false)
+                .HasColumnName("Sire_Breed");
+            entity.Property(e => e.damBreed)
+                .IsUnicode(false)
+                .HasColumnName("Dam_Breed");
         });
 
         modelBuilder.Entity<ABreed>(entity =>
@@ -333,9 +339,6 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DamId)
                 .IsUnicode(false)
                 .HasColumnName("Dam_Id");
-            entity.Property(e => e.bloodComp)
-                .IsUnicode(false)
-                .HasColumnName("Blood_Comp");
             entity.Property(e => e.DeleteFlag).HasColumnName("Delete_Flag");
             entity.Property(e => e.Status).HasColumnName("Status");
             entity.Property(e => e.CreatedBy)
@@ -362,6 +365,8 @@ public partial class PCC_DEVContext : DbContext
             entity.Property(e => e.DateRestored)
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
+            entity.Property(e => e.breedRegistryNumber)
+                .HasColumnName("BreedRegistryNumber");
         });
 
         modelBuilder.Entity<ATypeOwnership>(entity =>
