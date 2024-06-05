@@ -23,8 +23,6 @@ public partial class ABuffAnimal
     public DateTime? DateOfAcquisition { get; set; }
     public string Marking { get; set; }
     public string TypeOfOwnership { get; set; }
-    public int SireId { get; set; }
-    public int DamId { get; set; }
     public string BloodCode { get; set; }
     public bool DeleteFlag { get; set; }
     public string Status { get; set; }
@@ -37,4 +35,10 @@ public partial class ABuffAnimal
     public DateTime? DateRestored { get; set; }
     public string? RestoredBy { get; set; }
     public string breedRegistryNumber { get; set; }
+    public int? SireId { get; set; }
+    public int? DamId { get; set; }
+    public virtual ABuffAnimal? Sire { get; set; }
+    public virtual ABuffAnimal? Dam { get; set; }
+    public virtual ICollection<ABuffAnimal> SireChildren { get; set; }
+    public virtual ICollection<ABuffAnimal> DamChildren { get; set; }
 }
