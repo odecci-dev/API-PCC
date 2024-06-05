@@ -15,7 +15,7 @@ using System.Linq.Dynamic.Core;
 
 namespace API_PCC.Controllers
 {
-    //[Authorize("ApiKey")]
+    [Authorize("ApiKey")]
     [Route("[controller]/[action]")]
     [ApiController]
     public class PedigreeController : ControllerBase
