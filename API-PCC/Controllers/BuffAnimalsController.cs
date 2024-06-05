@@ -537,7 +537,7 @@ namespace API_PCC.Controllers
 
         }
 
-        private Animal populateAnimalModel(int id)
+        private Animal populateAnimalModel(int? id)
         {
             var buffAnimal = _context.ABuffAnimals.Where(animal => animal.Id.Equals(id)).FirstOrDefault();
             if (buffAnimal == null)
