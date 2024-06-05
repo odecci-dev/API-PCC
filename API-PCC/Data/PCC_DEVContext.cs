@@ -3,6 +3,7 @@
 using API_PCC.EntityModels;
 using API_PCC.Models;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API_PCC.Data;
 
@@ -375,7 +376,8 @@ public partial class PCC_DEVContext : DbContext
                 .HasColumnType("date")
                 .HasColumnName("Date_Restored");
             entity.Property(e => e.breedRegistryNumber)
-                .HasColumnName("BreedRegistryNumber");
+                .HasColumnName("BreedRegistryNumber")
+                .ValueGeneratedOnAddOrUpdate();
         });
 
         modelBuilder.Entity<ATypeOwnership>(entity =>

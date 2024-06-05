@@ -266,53 +266,81 @@ namespace API_PCC.Controllers
                 }
 
                 var buffAnimal = buildBuffAnimal(buffAnimalRegistrationModel);
+                ABuffAnimal? sireRecord = null;
+                ABuffAnimal? damRecord = null;
+                TblOriginOfAcquisitionModel? originOfAcquisitionRecord = null;
 
-                var sireRecord = animalRecordCheck(buffAnimalRegistrationModel.Sire);
-
-                if (sireRecord == null)
+                // Required Fields to generate breed registry number
+                // Animal_ID_Number, Sex, Breed_Code
+                if (!isRequiredFieldEmpty(buffAnimalRegistrationModel.Sire))
                 {
-                    var sire = buildBuffAnimal(buffAnimalRegistrationModel.Sire);
-                    var sireModel = _context.ABuffAnimals.Add(sire);
-                    sireRecord = sireModel.Entity;
+                    sireRecord = animalRecordCheck(buffAnimalRegistrationModel.Sire);
+
+                    if (sireRecord == null)
+                    {
+                        var sire = buildBuffAnimal(buffAnimalRegistrationModel.Sire);
+                        var sireModel = _context.ABuffAnimals.Add(sire);
+                        sireRecord = sireModel.Entity;
+                    }
+                }
+                
+                if (!isRequiredFieldEmpty(buffAnimalRegistrationModel.Dam))
+                {
+                    damRecord = animalRecordCheck(buffAnimalRegistrationModel.Dam);
+
+                    if (damRecord == null)
+                    {
+                        var dam = buildBuffAnimal(buffAnimalRegistrationModel.Dam);
+                        var damModel = _context.ABuffAnimals.Add(dam);
+                        damRecord = damModel.Entity;
+                    }
                 }
 
-                var damRecord = animalRecordCheck(buffAnimalRegistrationModel.Dam);
-
-                if (damRecord == null)
+                if (!isOriginOfAcquisitionEmpty(buffAnimalRegistrationModel.OriginOfAcquisition))
                 {
-                    var dam = buildBuffAnimal(buffAnimalRegistrationModel.Dam);
-                    var damModel = _context.ABuffAnimals.Add(dam);
-                    damRecord = damModel.Entity;
+                    originOfAcquisitionRecord = originOfAcquistionRecordCheck(buffAnimalRegistrationModel.OriginOfAcquisition);
+
+                    if (originOfAcquisitionRecord == null)
+                    {
+                        var originOfAcquistion = buildOriginOfAcquistion(buffAnimalRegistrationModel.OriginOfAcquisition);
+
+                        var originOfAcquistionModel = _context.OriginOfAcquisitionModels.Add(originOfAcquistion);
+                        originOfAcquisitionRecord = originOfAcquistionModel.Entity;
+                    }
                 }
 
-
-                var originOfAcquisitionRecord = originOfAcquistionRecordCheck(buffAnimalRegistrationModel.OriginOfAcquisition);
-
-                if (originOfAcquisitionRecord == null)
-                {
-                    var originOfAcquistion = buildOriginOfAcquistion(buffAnimalRegistrationModel.OriginOfAcquisition);
-
-                    var originOfAcquistionModel = _context.OriginOfAcquisitionModels.Add(originOfAcquistion);
-                    originOfAcquisitionRecord = originOfAcquistionModel.Entity;
-                }
 
                 await _context.SaveChangesAsync();
 
-                buffAnimal.SireId = sireRecord.Id;
-                buffAnimal.DamId = damRecord.Id;
-                buffAnimal.OriginOfAcquisition = originOfAcquisitionRecord.Id;
+                if (originOfAcquisitionRecord != null)
+                {
+                    buffAnimal.OriginOfAcquisition = originOfAcquisitionRecord.Id;
+                }
+
+                if (sireRecord != null)
+                {
+                    buffAnimal.SireId = sireRecord.Id;
+                }
+
+                if (damRecord != null)
+                {
+                    buffAnimal.DamId = damRecord.Id;
+                }
                 buffAnimal.CreatedBy = buffAnimalRegistrationModel.CreatedBy;
                 buffAnimal.CreatedDate = DateTime.Now;
                 buffAnimal.Status = "1";
 
-                var bloodCalculatorModel = new BloodCalculatorModel()
+                if (sireRecord != null && damRecord != null)
                 {
-                    sireBreedRegistryNumber = sireRecord.breedRegistryNumber,
-                    damBreedRegistryNumber = damRecord.breedRegistryNumber
-                };
-                var bloodCompDetails = _bloodCalculator.compute(bloodCalculatorModel);
+                    var bloodCalculatorModel = new BloodCalculatorModel()
+                    {
+                        sireBreedRegistryNumber = sireRecord.breedRegistryNumber,
+                        damBreedRegistryNumber = damRecord.breedRegistryNumber
+                    };
+                    var bloodCompDetails = _bloodCalculator.compute(bloodCalculatorModel);
 
-                buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                    buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                }
 
                 _context.ABuffAnimals.Add(buffAnimal);
                 await _context.SaveChangesAsync();
@@ -324,6 +352,31 @@ namespace API_PCC.Controllers
 
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private bool isRequiredFieldEmpty(Animal animal)
+        {
+            bool isRequiredFieldEmpty = false;
+            if (animal.IdNumber.IsNullOrEmpty() &&
+                animal.Sex.IsNullOrEmpty() &&
+                animal.BreedCode.IsNullOrEmpty())
+            {
+                isRequiredFieldEmpty = !isRequiredFieldEmpty;
+            }
+            return isRequiredFieldEmpty;
+        }
+
+        private bool isOriginOfAcquisitionEmpty(OriginOfAcquisitionModel originOfAcquisition)
+        {
+            bool isOriginOfAcquisitionEmpty = false;
+            if (originOfAcquisition.City.IsNullOrEmpty() &&
+                originOfAcquisition.Province.IsNullOrEmpty() &&
+                originOfAcquisition.Barangay.IsNullOrEmpty() &&
+                originOfAcquisition.Region.IsNullOrEmpty())
+            {
+                isOriginOfAcquisitionEmpty = !isOriginOfAcquisitionEmpty;
+            }
+            return isOriginOfAcquisitionEmpty;
         }
 
         private void populateAnimal(ABuffAnimal animal, Animal animalUpdateModel)
@@ -671,6 +724,7 @@ namespace API_PCC.Controllers
             {
                 AnimalIdNumber = animal.IdNumber,
                 AnimalName = animal.Name,
+                Sex = animal.Sex,
                 RfidNumber = animal.RegistrationNumber,
                 BreedCode = animal.BreedCode,
                 BloodCode = animal.BloodCode,
