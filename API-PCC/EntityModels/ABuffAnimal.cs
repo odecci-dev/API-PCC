@@ -19,7 +19,7 @@ public partial class ABuffAnimal
     public string BreedCode { get; set; }
     public string BirthType { get; set; }
     public string CountryOfBirth { get; set; }
-    public int OriginOfAcquisition { get; set; }
+    public int? OriginOfAcquisition { get; set; }
     public DateTime? DateOfAcquisition { get; set; }
     public string Marking { get; set; }
     public string TypeOfOwnership { get; set; }

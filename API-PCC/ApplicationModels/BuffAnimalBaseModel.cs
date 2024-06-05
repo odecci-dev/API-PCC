@@ -20,6 +20,5 @@
         public string BloodCode { get; set; }
         public Animal Sire { get; set; }
         public Animal Dam { get; set; }
-        public string bloodComp { get; set; }
     }
 }

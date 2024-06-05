@@ -15,7 +15,7 @@ using System.Linq.Dynamic.Core;
 
 namespace API_PCC.Controllers
 {
-    //[Authorize("ApiKey")]
+    [Authorize("ApiKey")]
     [Route("[controller]/[action]")]
     [ApiController]
     public class PedigreeController : ControllerBase
@@ -53,38 +53,49 @@ namespace API_PCC.Controllers
             animalDetails.DateOfBirth = animal.DateOfBirth;
             animalDetails.CountryOfBirth = animal.CountryOfBirth;
             animalDetails.BirthType = animal.BirthType;
-            animalDetails.OriginOfAcquisition = populateOriginOfAcquistionModel(animal);
+
+            var originOfAcquisition = populateOriginOfAcquistionModel(animal);
+
+            if (originOfAcquisition != null)
+            {
+                animalDetails.OriginOfAcquisition = originOfAcquisition;
+            }
+ 
             animalDetails.DateOfAcquisition = animal.DateOfAcquisition;
             animalDetails.TypeOfOWnership = animal.TypeOfOwnership;
 
             var herdDetails = new HerdDetails();
             var buffHerd = getHerdRecord(animal.HerdCode);
-            herdDetails.DateOfApplication = buffHerd.DateCreated;
-            herdDetails.HerdName = buffHerd.HerdName;
-            herdDetails.HerdType = buffHerd.HerdClassDesc;
-            herdDetails.HerdSize = buffHerd.HerdSize;
-
-            var buffaloTypeList = new List<string>();
-            var feedingSystemList = new List<string>();
-            if (buffHerd.buffaloType != null)
+            if (buffHerd != null)
             {
-                foreach (HBuffaloType buffaloType in buffHerd.buffaloType)
-                {
-                    buffaloTypeList.Add(buffaloType.BreedTypeCode);
-                }
-                herdDetails.TypeOfBuffalo = string.Join(",", buffaloTypeList);
+                herdDetails.DateOfApplication = buffHerd.DateCreated;
+                herdDetails.HerdName = buffHerd.HerdName;
+                herdDetails.HerdType = buffHerd.HerdClassDesc;
+                herdDetails.HerdSize = buffHerd.HerdSize;
 
-            }
-            if (buffHerd.feedingSystem != null)
-            {
-                foreach (HFeedingSystem feedingSystem in buffHerd.feedingSystem)
+                var buffaloTypeList = new List<string>();
+                var feedingSystemList = new List<string>();
+                if (buffHerd.buffaloType != null)
                 {
-                    feedingSystemList.Add(feedingSystem.FeedingSystemCode);
+                    foreach (HBuffaloType buffaloType in buffHerd.buffaloType)
+                    {
+                        buffaloTypeList.Add(buffaloType.BreedTypeCode);
+                    }
+                    herdDetails.TypeOfBuffalo = string.Join(",", buffaloTypeList);
+
                 }
-                herdDetails.FeedingSystem = string.Join(",", feedingSystemList);
+                if (buffHerd.feedingSystem != null)
+                {
+                    foreach (HFeedingSystem feedingSystem in buffHerd.feedingSystem)
+                    {
+                        feedingSystemList.Add(feedingSystem.FeedingSystemCode);
+                    }
+                    herdDetails.FeedingSystem = string.Join(",", feedingSystemList);
+                }
+                herdDetails.FarmManager = buffHerd.FarmManager;
+                herdDetails.FarmAddress = buffHerd.FarmAddress;
             }
-            herdDetails.FarmManager = buffHerd.FarmManager;
-            herdDetails.FarmAddress = buffHerd.FarmAddress;
+           
 
             pedigreePrintResponse.animalDetails = animalDetails;
             pedigreePrintResponse.herdDetails = herdDetails;
@@ -100,10 +111,6 @@ namespace API_PCC.Controllers
                                    .Include(herd => herd.buffaloType)
                                    .Include(herd => herd.feedingSystem)
                                    .Where(herd => herd.HerdCode.Equals(herdCode)).FirstOrDefault();
-            if (buffHerd == null) 
-            {
-                throw new Exception("Herd record not found!");
-            }
             return buffHerd;
         }
 
@@ -112,7 +119,7 @@ namespace API_PCC.Controllers
             var originOfAcquisition = _context.OriginOfAcquisitionModels.Where(originOfAcquistion => originOfAcquistion.Id.Equals(buffAnimal.OriginOfAcquisition)).FirstOrDefault();
             if (originOfAcquisition == null)
             {
-                throw new Exception("Acquisition Record not found!");
+                return null;
             }
             var originOfAcquisitionModel = new OriginOfAcquisitionModel()
             {
