@@ -646,12 +646,12 @@ public partial class PCC_DEVContext : DbContext
                 .IsRequired()
                 .HasMaxLength(10)
                 .IsUnicode(false)
-                .HasColumnName("Feed_Code");
+                .HasColumnName("FeedingSystemCode");
             entity.Property(e => e.FeedingSystemDesc)
                 .IsRequired()
                 .HasMaxLength(15)
                 .IsUnicode(false)
-                .HasColumnName("Feed_Desc");
+                .HasColumnName("FeedingSystemDesc");
             entity.Property(e => e.Status)
                 .IsRequired()
                 .IsUnicode(false)

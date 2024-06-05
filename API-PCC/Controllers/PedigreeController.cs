@@ -15,7 +15,7 @@ using System.Linq.Dynamic.Core;
 
 namespace API_PCC.Controllers
 {
-    [Authorize("ApiKey")]
+    //[Authorize("ApiKey")]
     [Route("[controller]/[action]")]
     [ApiController]
     public class PedigreeController : ControllerBase
@@ -29,10 +29,108 @@ namespace API_PCC.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> view(int id)
         {
+            var pedigreeTree = createPedigreeTree(id);
+            return Ok(pedigreeTree);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult> print(int id)
+        {
             var animal = await _context.ABuffAnimals.FindAsync(id);
+
+            var pedigreePrintResponse = new AnimalPedigreePrintResponse();
+
+            var animalDetails = new AnimalDetails();
+            animalDetails.DateOfRegistration = animal.CreatedDate;
+            animalDetails.BreedRegistrationNumber = animal.breedRegistryNumber;
+            animalDetails.HerdCode = animal.HerdCode;
+            animalDetails.AnimalIdNumber = animal.AnimalIdNumber;
+            animalDetails.Name = animal.AnimalName;
+            animalDetails.Rfid = animal.RfidNumber;
+            animalDetails.Sex = animal.Sex;
+            animalDetails.Breed = animal.BreedCode;
+            animalDetails.BloodComposition = animal.BloodCode;
+            animalDetails.DateOfBirth = animal.DateOfBirth;
+            animalDetails.CountryOfBirth = animal.CountryOfBirth;
+            animalDetails.BirthType = animal.BirthType;
+            animalDetails.OriginOfAcquisition = populateOriginOfAcquistionModel(animal);
+            animalDetails.DateOfAcquisition = animal.DateOfAcquisition;
+            animalDetails.TypeOfOWnership = animal.TypeOfOwnership;
+
+            var herdDetails = new HerdDetails();
+            var buffHerd = getHerdRecord(animal.HerdCode);
+            herdDetails.DateOfApplication = buffHerd.DateCreated;
+            herdDetails.HerdName = buffHerd.HerdName;
+            herdDetails.HerdType = buffHerd.HerdClassDesc;
+            herdDetails.HerdSize = buffHerd.HerdSize;
+
+            var buffaloTypeList = new List<string>();
+            var feedingSystemList = new List<string>();
+            if (buffHerd.buffaloType != null)
+            {
+                foreach (HBuffaloType buffaloType in buffHerd.buffaloType)
+                {
+                    buffaloTypeList.Add(buffaloType.BreedTypeCode);
+                }
+                herdDetails.TypeOfBuffalo = string.Join(",", buffaloTypeList);
+
+            }
+            if (buffHerd.feedingSystem != null)
+            {
+                foreach (HFeedingSystem feedingSystem in buffHerd.feedingSystem)
+                {
+                    feedingSystemList.Add(feedingSystem.FeedingSystemCode);
+                }
+                herdDetails.FeedingSystem = string.Join(",", feedingSystemList);
+            }
+            herdDetails.FarmManager = buffHerd.FarmManager;
+            herdDetails.FarmAddress = buffHerd.FarmAddress;
+
+            pedigreePrintResponse.animalDetails = animalDetails;
+            pedigreePrintResponse.herdDetails = herdDetails;
+            pedigreePrintResponse.animalPedigree = createPedigreeTree(id);
+
+            return Ok(pedigreePrintResponse);
+        }
+
+
+        private HBuffHerd getHerdRecord(string herdCode)
+        {
+            var buffHerd = _context.HBuffHerds
+                                   .Include(herd => herd.buffaloType)
+                                   .Include(herd => herd.feedingSystem)
+                                   .Where(herd => herd.HerdCode.Equals(herdCode)).FirstOrDefault();
+            if (buffHerd == null) 
+            {
+                throw new Exception("Herd record not found!");
+            }
+            return buffHerd;
+        }
+
+        private OriginOfAcquisitionModel populateOriginOfAcquistionModel(ABuffAnimal buffAnimal)
+        {
+            var originOfAcquisition = _context.OriginOfAcquisitionModels.Where(originOfAcquistion => originOfAcquistion.Id.Equals(buffAnimal.OriginOfAcquisition)).FirstOrDefault();
+            if (originOfAcquisition == null)
+            {
+                throw new Exception("Acquisition Record not found!");
+            }
+            var originOfAcquisitionModel = new OriginOfAcquisitionModel()
+            {
+                City = originOfAcquisition.City,
+                Barangay = originOfAcquisition.Barangay,
+                Province = originOfAcquisition.Province,
+                Region = originOfAcquisition.Region
+            };
+            return originOfAcquisitionModel;
+
+        }
+
+        private AnimalPedigreeTree<AnimalPedigreeModel> createPedigreeTree(int id)
+        {
+            var animal = _context.ABuffAnimals.Find(id);
             var root = new AnimalPedigreeTree<AnimalPedigreeModel>();
 
-            if (animal != null )
+            if (animal != null)
             {
                 Node<AnimalPedigreeModel> rootNode = new Node<AnimalPedigreeModel>(convertToAnimalPedigreeModel(animal));
                 rootNode.level = 0;
@@ -40,30 +138,7 @@ namespace API_PCC.Controllers
 
                 generatePedigree(rootNode, animal);
             }
-            return Ok(root);
-        }
-
-        private AnimalPedigreeModel convertToAnimalPedigreeModel(ABuffAnimal buffAnimal)
-        {
-            if (buffAnimal != null) {
-                var animalPedigreeModel = new AnimalPedigreeModel()
-                {
-                    RegistrationNumber = buffAnimal.breedRegistryNumber,
-                    Photo = buffAnimal.Photo,
-                    Name = buffAnimal.AnimalName,
-                    DateOfBirth = buffAnimal.DateOfBirth,
-                    PlaceOfBirth = buffAnimal.CountryOfBirth
-                };
-                return animalPedigreeModel;
-            }
-
-            return null;
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult> print(int id)
-        {
-            return Ok();
+            return root;
         }
 
         private void generatePedigree(Node<AnimalPedigreeModel> parentNode, ABuffAnimal buffAnimal)
@@ -93,6 +168,23 @@ namespace API_PCC.Controllers
                 parentNode.AddDam(damNode);
                 generatePedigree(damNode, dam);
             }
+        }
+        private AnimalPedigreeModel convertToAnimalPedigreeModel(ABuffAnimal buffAnimal)
+        {
+            if (buffAnimal != null)
+            {
+                var animalPedigreeModel = new AnimalPedigreeModel()
+                {
+                    RegistrationNumber = buffAnimal.breedRegistryNumber,
+                    Photo = buffAnimal.Photo,
+                    Name = buffAnimal.AnimalName,
+                    DateOfBirth = buffAnimal.DateOfBirth,
+                    PlaceOfBirth = buffAnimal.CountryOfBirth
+                };
+                return animalPedigreeModel;
+            }
+
+            return null;
         }
 
     }
