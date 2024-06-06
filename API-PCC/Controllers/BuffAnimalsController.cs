@@ -347,9 +347,12 @@ namespace API_PCC.Controllers
 
                 return CreatedAtAction("save", new { id = buffAnimal.Id }, buffAnimal);
             }
+            catch (BadHttpRequestException ex)
+            {
+                return BadRequest(ex.GetBaseException().ToString());
+            }
             catch (Exception ex)
             {
-
                 return Problem(ex.GetBaseException().ToString());
             }
         }

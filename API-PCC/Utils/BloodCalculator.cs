@@ -26,6 +26,12 @@ namespace API_PCC.Utils
             try
             {
                 var bloodCalculators = _context.bloodCalculators.AsEnumerable().ToList();
+
+                if (bloodCalculators == null || bloodCalculators.Count == 0)
+                {
+                    throw new BadHttpRequestException ("No Blood Composition Formula Found!!");
+                }
+
                 string formula = "";
 
                 var bloodCompRecords = _context.ABloodComps;
@@ -65,6 +71,10 @@ namespace API_PCC.Utils
                     throw new Exception("Calculated Value did not match a Blood Composition Type!");
                 }
                 return bloodCompRecord;
+            }
+            catch (BadHttpRequestException ex)
+            {
+                throw ex;
             }
             catch (Exception ex)
             {

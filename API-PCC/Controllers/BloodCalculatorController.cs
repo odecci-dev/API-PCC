@@ -31,7 +31,18 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> compute(BloodCalculatorModel bloodCalculatorModel)
         {
-            return Ok(_bloodCalculator.compute(bloodCalculatorModel));
+            try
+            {
+                return Ok(_bloodCalculator.compute(bloodCalculatorModel));
+            }
+            catch (BadHttpRequestException ex)
+            {
+                return BadRequest(ex.GetBaseException().ToString());
+            }
+            catch (Exception ex)
+            {
+                return Problem(ex.GetBaseException().ToString());
+            }
         }
     }
 }
