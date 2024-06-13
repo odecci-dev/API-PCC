@@ -154,8 +154,11 @@ namespace API_PCC.Controllers
             {
                 return;
             }
-            var sire = _context.ABuffAnimals.Find(buffAnimal.SireId);
-            var dam =  _context.ABuffAnimals.Find(buffAnimal.DamId);
+            /*var sire = _context.ABuffAnimals.Find(buffAnimal.SireId);
+            var dam =  _context.ABuffAnimals.Find(buffAnimal.DamId);*/
+
+            ABuffAnimal sire = new ABuffAnimal();
+            ABuffAnimal dam = new ABuffAnimal();
 
             var sireToAnimalModel = convertToAnimalPedigreeModel(sire);
             var damToAnimalModel = convertToAnimalPedigreeModel(dam);

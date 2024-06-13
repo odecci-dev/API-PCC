@@ -171,67 +171,93 @@ namespace API_PCC.Controllers
                 return Conflict("Entity already exists");
             }
 
-            var sire = _context.ABuffAnimals
-                                        .Where(buffAnimal => !buffAnimal.DeleteFlag &&
-                                                buffAnimal.Id.Equals(buffAnimal.SireId))
-                                        .FirstOrDefault();
+            var familyRecords = _context.family.AsEnumerable();
 
-            if (sire == null)
+            var sire = _context.ABuffAnimals
+                               .Where(animal => !animal.DeleteFlag &&
+                                                animal.RfidNumber.Equals(updateModel.Sire.RegistrationNumber));
+
+            if (sire.IsNullOrEmpty())
             {
                 return Conflict("Sire does not exists");
             }
 
-            populateAnimal(sire, updateModel.Sire);
-            _context.Entry(sire).State = EntityState.Modified;
+            var sireRecord = sire.Join(familyRecords, sire => sire.Id, family => family.animalId, (animal, family) => new { animal = animal })
+                    .FirstOrDefault()
+                    .animal;
+
+            populateAnimal(sireRecord, updateModel.Sire);
+            _context.Entry(sireRecord).State = EntityState.Modified;
 
             var dam = _context.ABuffAnimals
-                                        .Where(buffAnimal => !buffAnimal.DeleteFlag &&
-                                                buffAnimal.Id.Equals(buffAnimal.DamId))
-                                        .FirstOrDefault();
+                               .Where(animal => !animal.DeleteFlag &&
+                                                animal.RfidNumber.Equals(updateModel.Dam.RegistrationNumber));
 
-            if (dam == null)
+            if (dam.IsNullOrEmpty())
             {
                 return Conflict("Dam does not exists");
             }
 
-            populateAnimal(dam, updateModel.Dam);
-            _context.Entry(dam).State = EntityState.Modified;
+            var damRecord = dam.Join(familyRecords, dam => dam.Id, family => family.animalId, (animal, family) => new { animal = animal })
+                               .FirstOrDefault()
+                               .animal;
 
+            populateAnimal(damRecord, updateModel.Dam);
+            _context.Entry(damRecord).State = EntityState.Modified;
 
-            var originOfAcquisition = _context.OriginOfAcquisitionModels
-                                        .Where(originOfAcquisition => 
+            TblOriginOfAcquisitionModel? originOfAcquisition = null;
+
+            if(!isOriginOfAcquisitionEmpty(updateModel.OriginOfAcquisition))
+            {
+                originOfAcquisition = _context.OriginOfAcquisitionModels
+                                        .Where(originOfAcquisition =>
                                                 originOfAcquisition.Id.Equals(updateModel.OriginOfAcquisition))
                                         .FirstOrDefault();
 
-            if (originOfAcquisition == null)
-            {
-                return Conflict("Origin of Acquisition does not exists");
+                if (originOfAcquisition == null)
+                {
+                    return Conflict("Origin of Acquisition does not exists");
+                }
+
+                populateOriginOfAcquistion(originOfAcquisition, updateModel.OriginOfAcquisition);
+                _context.Entry(originOfAcquisition).State = EntityState.Modified;
             }
-
-            populateOriginOfAcquistion(originOfAcquisition, updateModel.OriginOfAcquisition);
-            _context.Entry(originOfAcquisition).State = EntityState.Modified;
-
+            
             await _context.SaveChangesAsync();
 
             try
             {
                 buffAnimal = populateBuffAnimal(buffAnimal, updateModel);
-                buffAnimal.SireId = sire.Id;
-                buffAnimal.DamId = dam.Id;
-                buffAnimal.OriginOfAcquisition = originOfAcquisition.Id;
+                if (originOfAcquisition != null)
+                {
+                    buffAnimal.OriginOfAcquisition = originOfAcquisition.Id;
+                }
                 buffAnimal.UpdateDate = DateTime.Now;
                 buffAnimal.UpdatedBy = updateModel.UpdatedBy;
 
                 var bloodCalculatorModel = new BloodCalculatorModel()
                 {
-                    sireBreedRegistryNumber = sire.breedRegistryNumber,
-                    damBreedRegistryNumber = dam.breedRegistryNumber
+                    sireBreedRegistryNumber = sireRecord.breedRegistryNumber,
+                    damBreedRegistryNumber = damRecord.breedRegistryNumber
                 };
                 var bloodCompDetails = _bloodCalculator.compute(bloodCalculatorModel);
 
                 buffAnimal.BloodCode = bloodCompDetails.BloodCode;
 
                 _context.Entry(buffAnimal).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+
+                // Update family record using animal ID
+                var family = _context.family.Where(family => family.animalId.Equals(buffAnimal.Id)).FirstOrDefault();
+
+                family.sire = sireRecord;
+                family.dam = damRecord;
+                family.animalId = buffAnimal.Id;
+                family.status = 1;
+                family.deleteFlag = false;
+
+                _context.Entry(family).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
                 return Ok("Update Successful!");
@@ -312,20 +338,12 @@ namespace API_PCC.Controllers
 
                 await _context.SaveChangesAsync();
 
+
                 if (originOfAcquisitionRecord != null)
                 {
                     buffAnimal.OriginOfAcquisition = originOfAcquisitionRecord.Id;
                 }
 
-                if (sireRecord != null)
-                {
-                    buffAnimal.SireId = sireRecord.Id;
-                }
-
-                if (damRecord != null)
-                {
-                    buffAnimal.DamId = damRecord.Id;
-                }
                 buffAnimal.CreatedBy = buffAnimalRegistrationModel.CreatedBy;
                 buffAnimal.CreatedDate = DateTime.Now;
                 buffAnimal.Status = "1";
@@ -339,13 +357,34 @@ namespace API_PCC.Controllers
                     };
                     var bloodCompDetails = _bloodCalculator.compute(bloodCalculatorModel);
 
-                    buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                    if (bloodCompDetails != null)
+                    {
+                        buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                    }
                 }
 
-                _context.ABuffAnimals.Add(buffAnimal);
+                var savedEntity = _context.ABuffAnimals.Add(buffAnimal).Entity;
+                
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("save", new { id = buffAnimal.Id }, buffAnimal);
+                var family = new Family()
+                {
+                    sire = sireRecord,
+                    dam = damRecord,
+                    animalId = buffAnimal.Id,
+                    status = 1,
+                    deleteFlag = false,
+                };
+
+                _context.family.Add(family);
+
+                await _context.SaveChangesAsync();
+
+                ABuffAnimal? savedBuffAnimal = _context.ABuffAnimals
+                                            .Where(animal => animal.Id.Equals(savedEntity.Id))
+                                            .FirstOrDefault();
+
+                return CreatedAtAction("save", new { id = savedBuffAnimal.Id }, savedBuffAnimal);
             }
             catch (BadHttpRequestException ex)
             {
@@ -411,7 +450,6 @@ namespace API_PCC.Controllers
 
             return originOfAcquistionModel;
         }
-
 
         private ABuffAnimal animalRecordCheck(Animal animal)
         {
@@ -631,8 +669,8 @@ namespace API_PCC.Controllers
                 Marking = buffAnimal.Marking,
                 TypeOfOwnership = buffAnimal.TypeOfOwnership,
                 BloodCode = buffAnimal.BloodCode,
-                Sire = populateAnimalModel(buffAnimal.SireId),
-                Dam = populateAnimalModel(buffAnimal.DamId)
+                /*Sire = populateAnimalModel(buffAnimal.SireId),
+                Dam = populateAnimalModel(buffAnimal.DamId)*/
             };
 
             return buffAnimalResponseModel;

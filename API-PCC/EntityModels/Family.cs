@@ -1,9 +1,15 @@
-﻿namespace API_PCC.EntityModels
+﻿using API_PCC.ApplicationModels;
+using API_PCC.Models;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace API_PCC.EntityModels
 {
     public class Family
     {
         public int Id { get; set; }
         public int animalId { get; set; }
+        public virtual ABuffAnimal sire { get; set; }
+        public virtual ABuffAnimal dam { get; set; }
         public int sireId { get; set; }
         public int damId { get; set; }
         public int status { get; set; }
