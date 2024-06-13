@@ -6,6 +6,7 @@ using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Linq;
@@ -33,7 +34,12 @@ namespace API_PCC.Controllers
         {
             try
             {
-                return Ok(_bloodCalculator.compute(bloodCalculatorModel));
+                var bloodComp = _bloodCalculator.compute(bloodCalculatorModel);
+                if (bloodComp == null)
+                {
+                    return Problem("Problem in Calculating Blood Composition");
+                }
+                return Ok(bloodComp);
             }
             catch (BadHttpRequestException ex)
             {

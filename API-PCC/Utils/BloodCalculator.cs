@@ -32,19 +32,45 @@ namespace API_PCC.Utils
                     throw new BadHttpRequestException ("No Blood Composition Formula Found!!");
                 }
 
-                string formula = "";
+                var formula = "";
 
                 var bloodCompRecords = _context.ABloodComps;
 
-                var sireRecord = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.sireBreedRegistryNumber))
-                                        .Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
-                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
-                var damRecord = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.damBreedRegistryNumber))
-                                        .Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
-                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
+                var sire = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.sireBreedRegistryNumber));
 
-                var sireValue = getValue(sireRecord.First().bloodDesc);
-                var damValue = getValue(damRecord.First().bloodDesc);
+                if (sire.IsNullOrEmpty())
+                {
+                    return null;
+                }
+
+                if (sire.First().BloodCode == null) 
+                {
+                    // No blood code
+                }
+
+                var sireRecord = sire.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
+                                       (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc }).First();
+                
+                var dam = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.damBreedRegistryNumber));                       
+
+                if (dam.IsNullOrEmpty())
+                {
+                    return null;
+                }
+
+                if (dam.First().BloodCode == null)
+                {
+                    // No blood code
+                }
+
+                var damRecord = dam.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
+                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc }).First();
+
+                var sireValue = getValue(sireRecord.bloodDesc);
+                var damValue = getValue(damRecord.bloodDesc);
+
+                var sireBloodCode = sireRecord.bloodCode;
+                var damBloodCode = damRecord.bloodCode;
 
                 foreach (TblBLoodCalculator bloodCalculator in bloodCalculators)
                 {
@@ -53,16 +79,18 @@ namespace API_PCC.Utils
                         continue;
                     }
 
-                    if (filterCriteria(sireValue, damValue, bloodCalculator.Criteria))
+                    bool criteriaCheck = filterCriteria(sireBloodCode, damBloodCode, bloodCalculator.Criteria);
+
+                    if (criteriaCheck)
                     {
                         formula = bloodCalculator.Formula;
-                        formula = formula.Replace("sire", sireValue.ToString());
                         formula = formula.Replace("dam", damValue.ToString());
+                        formula = formula.Replace("sire", sireValue.ToString());
                         break;
                     }
                 }
 
-                var bloodCompValue = (double)formula.EvalNumerical();
+                var bloodCompValue = (double) formula.EvalNumerical();
 
                 var bloodCompRecord = _context.ABloodComps.Where(bloodComp => bloodComp.From <= bloodCompValue && bloodComp.To >= bloodCompValue).FirstOrDefault();
 
@@ -80,7 +108,6 @@ namespace API_PCC.Utils
             {
                 throw new Exception(ex.GetBaseException().ToString());
             }
-
         }
 
         private double getValue(string bloodDesc)
@@ -89,17 +116,17 @@ namespace API_PCC.Utils
             return value;
         }
 
-        private bool filterCriteria(double sire, double dam, string filter = null)
+        private bool filterCriteria(string sire, string dam, string filter = null)
         {
 
-            var sireParam = Expression.Parameter(typeof(double), "sire");
-            var damParam = Expression.Parameter(typeof(double), "dam");
+            var sireParam = Expression.Parameter(typeof(string), "sire");
+            var damParam = Expression.Parameter(typeof(string), "dam");
 
             // Add Filter string and parameters
             var e = (Expression)DynamicExpressionParser.ParseLambda(new[] { sireParam, damParam }, null, filter);
 
             // convert to Expression
-            var typedExpression = (Expression<Func<double, double, bool>>)e;
+            var typedExpression = (Expression<Func<string, string, bool>>)e;
 
             // Use as a condition
             bool filterCheck = typedExpression.Compile().Invoke(sire, dam);
