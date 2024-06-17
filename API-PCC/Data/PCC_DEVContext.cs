@@ -94,25 +94,6 @@ public partial class PCC_DEVContext : DbContext
             .WithOne(e => e.accessModel)
             .HasForeignKey(e => e.userAccessModelId);
 
-        /*modelBuilder.Entity<ABuffAnimal>()
-            .HasOne(c => c.Sire)
-            .WithMany(c => c.SireChildren)
-            .HasForeignKey(c => c.SireId)
-            .OnDelete(DeleteBehavior.Restrict);*/ // or Cascade depending on your needs
-
-        /*modelBuilder.Entity<Family>()
-            .HasOne(c => c.sire)
-            .WithOne(c => c.sire)
-            .HasForeignKey<ABuffAnimal>(c => c.Id)
-            .HasPrincipalKey<Family>(c => c.sireId);
-
-
-        modelBuilder.Entity<Family>()
-            .HasOne(c => c.dam)
-            .WithOne(c => c.dam)
-            .HasForeignKey<ABuffAnimal>(c => c.Id)
-            .HasPrincipalKey<Family>(c => c.sireId);*/
-
         modelBuilder.Entity<ABuffAnimal>()
         .HasOne<Family>()
         .WithOne(e => e.sire)
@@ -124,11 +105,6 @@ public partial class PCC_DEVContext : DbContext
         .WithOne(e => e.dam)
         .HasForeignKey<Family>(e => e.damId)
         .IsRequired();
-        /* modelBuilder.Entity<ABuffAnimal>()
-             .HasOne(c => c.Dam)
-             .WithMany(c => c.DamChildren)
-             .HasForeignKey(c => c.DamId)
-             .OnDelete(DeleteBehavior.Restrict);*/ // or Cascade depending on your needs
 
         modelBuilder.Entity<BuffHerdJoinTable>(entity =>
         {

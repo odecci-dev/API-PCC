@@ -35,42 +35,92 @@ namespace API_PCC.Utils
                 var formula = "";
 
                 var bloodCompRecords = _context.ABloodComps;
+                if (bloodCompRecords.IsNullOrEmpty())
+                {
+                    //throw new Exception("No records found for Blood Composition!!");
+                    return null;
+                }
 
                 var sire = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.sireBreedRegistryNumber));
 
                 if (sire.IsNullOrEmpty())
                 {
+                    //throw new Exception("No records found for Sire with Registry Number: "+ bloodCalculatorModel.sireBreedRegistryNumber);
                     return null;
                 }
 
                 if (sire.First().BloodCode == null) 
                 {
-                    // No blood code
+                    //throw new Exception("No Blood Code found for Sire !!");
+                    return null;
                 }
 
                 var sireRecord = sire.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
-                                       (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc }).First();
-                
+                                       (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
+
+                if (sireRecord.IsNullOrEmpty())
+                {
+                    //throw new Exception("Sire's blood code: " + sire.First().BloodCode + " not found on Blood Composition Table!");
+                    return null;
+                }
+
+                var sireResult = sireRecord.First();
+
                 var dam = _context.ABuffAnimals.Where(animal => animal.breedRegistryNumber.Equals(bloodCalculatorModel.damBreedRegistryNumber));                       
 
                 if (dam.IsNullOrEmpty())
                 {
+                    //throw new Exception("No records found for Dam with Registry Number: "+ bloodCalculatorModel.damBreedRegistryNumber);
                     return null;
                 }
 
                 if (dam.First().BloodCode == null)
                 {
-                    // No blood code
+                    //throw new Exception("No Blood Code found for Dam !!");
+                    return null;
                 }
 
                 var damRecord = dam.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
-                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc }).First();
+                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
 
-                var sireValue = getValue(sireRecord.bloodDesc);
-                var damValue = getValue(damRecord.bloodDesc);
+                if (damRecord.IsNullOrEmpty())
+                {
+                    //throw new Exception("Dam's blood code: " + dam.First().BloodCode + " not found on Blood Composition Table!");
+                    return null;
+                }
 
-                var sireBloodCode = sireRecord.bloodCode;
-                var damBloodCode = damRecord.bloodCode;
+                var damResult = damRecord.First();
+
+                if (sireResult.bloodDesc.IsNullOrEmpty())
+                {
+                    //throw new Exception("No Blood Desc found for Sire !!");
+                    return null;
+                }
+
+                if (damResult.bloodDesc.IsNullOrEmpty())
+                {
+                    //throw new Exception("No Blood Code found for Dam !!");
+                    return null;
+                }
+
+                if (sireResult.bloodCode.IsNullOrEmpty())
+                {
+                    //throw new Exception("Blood Code empty for Sire's blood composition record" );
+                    return null;
+
+                }
+
+                if (damResult.bloodCode.IsNullOrEmpty())
+                {
+                    //throw new Exception("Blood Code empty for Dam's blood composition record" );
+                    return null;
+                }
+
+                var sireValue = getValue(sireResult.bloodDesc);
+                var damValue = getValue(damResult.bloodDesc);
+
+                var sireBloodCode = sireResult.bloodCode;
+                var damBloodCode = damResult.bloodCode;
 
                 foreach (TblBLoodCalculator bloodCalculator in bloodCalculators)
                 {
@@ -84,6 +134,11 @@ namespace API_PCC.Utils
                     if (criteriaCheck)
                     {
                         formula = bloodCalculator.Formula;
+
+                        if (formula.IsNullOrEmpty())
+                        {
+                            continue;
+                        }
                         formula = formula.Replace("dam", damValue.ToString());
                         formula = formula.Replace("sire", sireValue.ToString());
                         break;
@@ -92,13 +147,13 @@ namespace API_PCC.Utils
 
                 var bloodCompValue = (double) formula.EvalNumerical();
 
-                var bloodCompRecord = _context.ABloodComps.Where(bloodComp => bloodComp.From <= bloodCompValue && bloodComp.To >= bloodCompValue).FirstOrDefault();
+                var bloodCompRecord = _context.ABloodComps.Where(bloodComp => bloodComp.From <= bloodCompValue && bloodComp.To >= bloodCompValue);
 
                 if (bloodCompRecord == null)
                 {
                     throw new Exception("Calculated Value did not match a Blood Composition Type!");
                 }
-                return bloodCompRecord;
+                return bloodCompRecord.First();
             }
             catch (BadHttpRequestException ex)
             {
