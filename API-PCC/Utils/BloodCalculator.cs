@@ -55,7 +55,7 @@ namespace API_PCC.Utils
                     return null;
                 }
 
-                var sireRecord = sire.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
+                var sireRecord = sire.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.Id,
                                        (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
 
                 if (sireRecord.IsNullOrEmpty())
@@ -80,7 +80,7 @@ namespace API_PCC.Utils
                     return null;
                 }
 
-                var damRecord = dam.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.BloodCode,
+                var damRecord = dam.Join(bloodCompRecords, animal => animal.BloodCode, bloodComp => bloodComp.Id,
                                         (animal, bloodComp) => new { animalIdNumber = animal.AnimalIdNumber, bloodCode = bloodComp.BloodCode, bloodDesc = bloodComp.BloodDesc });
 
                 if (damRecord.IsNullOrEmpty())

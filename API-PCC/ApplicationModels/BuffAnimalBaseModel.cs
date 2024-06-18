@@ -17,7 +17,7 @@
         public DateTime? DateOfAcquisition { get; set; }
         public string Marking { get; set; }
         public string TypeOfOwnership { get; set; }
-        public string BloodCode { get; set; }
+        public int BloodCode { get; set; }
         public Animal Sire { get; set; }
         public Animal Dam { get; set; }
     }

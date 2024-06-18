@@ -242,7 +242,7 @@ namespace API_PCC.Controllers
                 };
                 var bloodCompDetails = _bloodCalculator.compute(bloodCalculatorModel);
 
-                buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                buffAnimal.BloodCode = bloodCompDetails.Id;
 
                 _context.Entry(buffAnimal).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
@@ -359,7 +359,7 @@ namespace API_PCC.Controllers
 
                     if (bloodCompDetails != null)
                     {
-                        buffAnimal.BloodCode = bloodCompDetails.BloodCode;
+                        buffAnimal.BloodCode = bloodCompDetails.Id;
                     }
                 }
 
@@ -730,7 +730,7 @@ namespace API_PCC.Controllers
             {
                 buffAnimal.TypeOfOwnership = updateModel.TypeOfOwnership;
             }
-            if (updateModel.BloodCode != null && updateModel.BloodCode != "")
+            if (updateModel.BloodCode != null)
             {
                 buffAnimal.BloodCode = updateModel.BloodCode;
             }
