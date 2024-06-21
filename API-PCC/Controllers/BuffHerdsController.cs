@@ -409,7 +409,6 @@ namespace API_PCC.Controllers
             int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
             items = buffHerdList.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
-            //var herdModels = convertDataRowListToHerdModelList(items);
             List<BuffHerdListResponseModel> buffHerdBaseModels = convertBuffHerdToResponseModelList(buffHerdList);
 
             var result = new List<HerdPagedModel>();
@@ -539,7 +538,7 @@ namespace API_PCC.Controllers
             }
            
             return buffHerdResponseModels;
-        }
+        }   
 
         private BuffHerdListResponseModel convertBuffHerdToResponseModel(HBuffHerd buffHerd)
         {

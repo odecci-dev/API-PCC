@@ -4,18 +4,12 @@ using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
 using API_PCC.Manager;
 using API_PCC.Models;
+using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using NuGet.Protocol.Core.Types;
-using Org.BouncyCastle.Utilities;
-using System.Data;
-using System.Drawing.Printing;
 using System.Data;
 using System.Data.SqlClient;
-using API_PCC.Utils;
-using API_PCC.EntityModels;
 namespace API_PCC.Controllers
 {
     [Authorize("ApiKey")]
