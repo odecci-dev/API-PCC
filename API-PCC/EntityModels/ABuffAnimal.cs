@@ -24,7 +24,7 @@ public partial class ABuffAnimal
     public DateTime? DateOfAcquisition { get; set; }
     public string Marking { get; set; }
     public string TypeOfOwnership { get; set; }
-    public int BloodCode { get; set; }
+    public int? BloodCode { get; set; }
     public bool DeleteFlag { get; set; }
     public string Status { get; set; }
     public string CreatedBy { get; set; }
