@@ -19,7 +19,6 @@ namespace API_PCC.Controllers
     public class UserTypeController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public UserTypeController(PCC_DEVContext context)
         {
@@ -32,8 +31,11 @@ namespace API_PCC.Controllers
 
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeSearchQuery(searchFilter), null, populateSearchSqlParameters(searchFilter));
-                var result = buildUserTypePagedModel(searchFilter, queryResult);
+                var userTypeList = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag &&
+                                                                                (userType.code.Equals(searchFilter.searchParam) || 
+                                                                                 userType.name.Equals(searchFilter.searchParam))).ToList();
+
+                var result = buildUserTypePagedModel(searchFilter, userTypeList);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -41,7 +43,7 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
-        private List<UserTypePagedModel> buildUserTypePagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
+        private List<UserTypePagedModel> buildUserTypePagedModel(CommonSearchFilterModel searchFilter, List<TblUserTypeModel> userTypes)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
@@ -49,11 +51,9 @@ namespace API_PCC.Controllers
             int totalItems = 0;
             int totalPages = 0;
 
-            totalItems = dt.Rows.Count;
+            totalItems = userTypes.Count;
             totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
-
-            var userTypes = convertDataRowListToUserTypeList(items);
+            items = userTypes.Skip((page - 1) * pagesize).Take(pagesize).ToList();
             
             var result = new List<UserTypePagedModel>();
             var item = new UserTypePagedModel();
@@ -141,14 +141,13 @@ namespace API_PCC.Controllers
         [HttpGet("{name}")]
         public async Task<ActionResult<TblUserTypeModel>> view(string name)
         {
-            DataTable userTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeQueryByName(), null, populateSqlParameters(name));
-
-            if (userTypeRecord.Rows.Count == 0)
+            var userTypeModel = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag && 
+                                                                              userType.name.Equals(name)).FirstOrDefault();
+            if (userTypeModel == null)
             {
                 return Conflict("No records found!");
             }
 
-            var userTypeModel = convertDataRowToUserType(userTypeRecord.Rows[0]);
             var userTypeResponseModel = convertUserTypeToResponseModel(userTypeModel);
 
             return Ok(userTypeResponseModel);
@@ -168,24 +167,25 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, UserTypeUpdateModel userTypeUpdateModel)
         {
-            DataTable userTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeQueryById(), null, populateSqlParameters(id));
-
-            if (userTypeRecord.Rows.Count == 0)
+            var userTypeModel = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag && userType.Id.Equals(id)).FirstOrDefault();
+            if (userTypeModel == null)
             {
                 return Conflict("No records matched!");
             }
 
-            DataTable userTypeDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeDuplicateCheckUpdateQuery(), null, populateSqlParameters(id, userTypeUpdateModel));
+            var userTypeDuplicateCheck = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag && 
+                                                                                      !userType.Id.Equals(id) &&
+                                                                                      (userType.code.Equals(userTypeUpdateModel.Code) &&
+                                                                                       userType.name.Equals(userTypeUpdateModel.Name))).FirstOrDefault();
 
             // check for duplication
-            if (userTypeDuplicateCheck.Rows.Count > 0)
+            if (userTypeDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");
             }
 
             try
             {
-                var userTypeModel = convertDataRowToUserType(userTypeRecord.Rows[0]);
                 populateUserType(userTypeModel, userTypeUpdateModel);
                 _context.Entry(userTypeModel).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
@@ -205,10 +205,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<TblUserTypeModel>> save(UserTypeRegistrationModel userTypeRegistrationModel)
         {
-            DataTable userTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeDuplicateCheckSaveQuery(), null, populateSqlParameters(userTypeRegistrationModel));
+            var userTypeDuplicateCheck = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag &&
+                                                                                      (userType.code.Equals(userTypeRegistrationModel.Code) &&
+                                                                                       userType.name.Equals(userTypeRegistrationModel.Name))).FirstOrDefault();
 
             // check for duplication
-            if (userTypeRecord.Rows.Count > 0)
+            if (userTypeDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");
             }
@@ -233,14 +235,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> delete(DeletionModel deletionModel)
         {
-            DataTable userTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeQueryById(), null, populateSqlParameters(deletionModel.id));
+            var userTypeModel = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag && userType.Id.Equals(deletionModel.id)).FirstOrDefault();
 
-            if (userTypeRecord.Rows.Count == 0)
+            if (userTypeModel == null)
             {
                 return Conflict("No records matched!");
             }
-
-            var userTypeModel = convertDataRowToUserType(userTypeRecord.Rows[0]);
 
             try
             {
@@ -265,14 +265,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
         {
-            DataTable userTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserTypeDeletedSearchQueryById(), null, populateSqlParameters(restorationModel.id));
+            var userTypeModel = _context.tblUserTypeModels.Where(userType => userType.DeleteFlag && userType.Id.Equals(restorationModel.id)).FirstOrDefault();
 
-            if (userTypeRecord.Rows.Count == 0)
+            if (userTypeModel == null)
             {
                 return Conflict("No deleted records matched!");
             }
-
-            var userTypeModel = convertDataRowToUserType(userTypeRecord.Rows[0]);
 
             try
             {
@@ -293,54 +291,6 @@ namespace API_PCC.Controllers
             }
         }
 
-        private SqlParameter[] populateSqlParameters(int id, UserTypeUpdateModel userTypeUpdateModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Code",
-                Value = userTypeUpdateModel.Code ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Name",
-                Value = userTypeUpdateModel.Name ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(UserTypeRegistrationModel userTypeRegistrationModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Code",
-                Value = userTypeRegistrationModel.Code ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Name",
-                Value = userTypeRegistrationModel.Name ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
         private void populateUserType(TblUserTypeModel userType, UserTypeUpdateModel userTypeUpdateModel)
         {
             userType.code = userTypeUpdateModel.Code;

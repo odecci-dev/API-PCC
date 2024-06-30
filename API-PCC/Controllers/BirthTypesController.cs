@@ -18,7 +18,6 @@ namespace API_PCC.Controllers
     public class BirthTypesController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
         public BirthTypesController(PCC_DEVContext context)
         {
             _context = context;
@@ -30,8 +29,10 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBirthTypeSearchQueryByBirthTypeCodeOrBirthTypeDesc(), null, populateSqlParameters(searchFilter));
-                var result = buildBirthTypesPagedModel(searchFilter, queryResult);
+                var birthTypeList = _context.ABirthTypes.Where(birthType => !birthType.DeleteFlag && (
+                                                                             birthType.BirthTypeCode.Equals(searchFilter.searchParam) ||
+                                                                             birthType.BirthTypeDesc.Equals(searchFilter.searchParam))).ToList();
+                var result = buildBirthTypesPagedModel(searchFilter, birthTypeList);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -40,7 +41,7 @@ namespace API_PCC.Controllers
             }
         }
 
-        private List<BirthTypesPagedModel> buildBirthTypesPagedModel(BirthTypesSearchFilterModel searchFilter, DataTable dt)
+        private List<BirthTypesPagedModel> buildBirthTypesPagedModel(BirthTypesSearchFilterModel searchFilter, List<ABirthType> birthTypes)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
@@ -48,11 +49,9 @@ namespace API_PCC.Controllers
             int totalItems = 0;
             int totalPages = 0;
 
-            totalItems = dt.Rows.Count;
+            totalItems = birthTypes.Count;
             totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
-
-            var birthTypes = convertDataRowListToBirthTypeList(items);
+            items = birthTypes.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
             var result = new List<BirthTypesPagedModel>();
             var item = new BirthTypesPagedModel();
@@ -275,9 +274,5 @@ namespace API_PCC.Controllers
             }
         }
 
-        private bool ABirthTypeExists(int id)
-        {
-            return (_context.ABirthTypes?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
     }
 }

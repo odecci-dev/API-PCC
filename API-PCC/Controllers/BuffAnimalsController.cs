@@ -668,9 +668,7 @@ namespace API_PCC.Controllers
                 DateOfAcquisition = buffAnimal.DateOfAcquisition,
                 Marking = buffAnimal.Marking,
                 TypeOfOwnership = buffAnimal.TypeOfOwnership,
-                BloodCode = buffAnimal.BloodCode,
-                /*Sire = populateAnimalModel(buffAnimal.SireId),
-                Dam = populateAnimalModel(buffAnimal.DamId)*/
+                BloodCode = buffAnimal.BloodCode
             };
 
             return buffAnimalResponseModel;

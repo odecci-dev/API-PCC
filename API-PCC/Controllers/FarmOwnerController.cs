@@ -22,7 +22,6 @@ namespace API_PCC.Controllers
     public class FarmOwnerController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public FarmOwnerController(PCC_DEVContext context)
         {
@@ -36,76 +35,15 @@ namespace API_PCC.Controllers
             searchFilter.searchValue = StringSanitizer.sanitizeString(searchFilter.searchValue);
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFarmOwnerSearchQueryByFirstNameOrLastName(), null, populateSqlParameters(searchFilter));
-                var result = buildFarmOwnerPagedModel(searchFilter, queryResult);
+                var farmOwnerList = _context.TblFarmOwners.Where(farmOwner => farmOwner.FirstName.Equals(searchFilter.searchValue) &&
+                                                                              farmOwner.LastName.Equals(searchFilter.searchValue)).ToList();
+                var result = buildFarmOwnerPagedModel(searchFilter, farmOwnerList);
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 return Problem(ex.GetBaseException().ToString());
             }
-        }
-
-        private List<FarmOwnerPagedModel> buildFarmOwnerPagedModel(FarmOwnerSearchFilterModel searchFilter, DataTable dt)
-        {
-            int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
-            int page = searchFilter.page == 0 ? 1 : searchFilter.page;
-            var items = (dynamic)null;
-            int totalItems = 0;
-            int totalPages = 0;
-
-            totalItems = dt.Rows.Count;
-            totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
-
-            var farmOwners = convertDataRowListToFarmOwnerList(items);
-
-            var result = new List<FarmOwnerPagedModel>();
-            var item = new FarmOwnerPagedModel();
-
-            int pages = searchFilter.page == 0 ? 1 : searchFilter.page;
-            item.CurrentPage = searchFilter.page == 0 ? "1" : searchFilter.page.ToString();
-            int page_prev = pages - 1;
-
-            double t_records = Math.Ceiling(Convert.ToDouble(totalItems) / Convert.ToDouble(pagesize));
-            int page_next = searchFilter.page >= t_records ? 0 : pages + 1;
-            item.NextPage = items.Count % pagesize >= 0 ? page_next.ToString() : "0";
-            item.PrevPage = pages == 1 ? "0" : page_prev.ToString();
-            item.TotalPage = t_records.ToString();
-            item.PageSize = pagesize.ToString();
-            item.TotalRecord = totalItems.ToString();
-            item.items = farmOwners;
-            result.Add(item);
-
-            return result;
-        }
-
-        private SqlParameter[] populateSqlParameters(FarmOwnerSearchFilterModel searchFilterModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "SearchParam",
-                Value = searchFilterModel.searchValue ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private List<TblFarmOwner> convertDataRowListToFarmOwnerList(List<DataRow> dataRowList)
-        {
-            var farmOwnerList = new List<TblFarmOwner>();
-
-            foreach (DataRow dataRow in dataRowList)
-            {
-                var herdModel = DataRowToObject.ToObject<TblFarmOwner>(dataRow);
-                farmOwnerList.Add(herdModel);
-            }
-
-            return farmOwnerList;
         }
 
         // GET: farmOwners/search/5
@@ -200,7 +138,37 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
+        private List<FarmOwnerPagedModel> buildFarmOwnerPagedModel(FarmOwnerSearchFilterModel searchFilter, List<TblFarmOwner> farmOwners)
+        {
+            int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
+            int page = searchFilter.page == 0 ? 1 : searchFilter.page;
+            var items = (dynamic)null;
+            int totalItems = 0;
+            int totalPages = 0;
 
+            totalItems = farmOwners.Count;
+            totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
+            items = farmOwners.Skip((page - 1) * pagesize).Take(pagesize).ToList();
+
+            var result = new List<FarmOwnerPagedModel>();
+            var item = new FarmOwnerPagedModel();
+
+            int pages = searchFilter.page == 0 ? 1 : searchFilter.page;
+            item.CurrentPage = searchFilter.page == 0 ? "1" : searchFilter.page.ToString();
+            int page_prev = pages - 1;
+
+            double t_records = Math.Ceiling(Convert.ToDouble(totalItems) / Convert.ToDouble(pagesize));
+            int page_next = searchFilter.page >= t_records ? 0 : pages + 1;
+            item.NextPage = items.Count % pagesize >= 0 ? page_next.ToString() : "0";
+            item.PrevPage = pages == 1 ? "0" : page_prev.ToString();
+            item.TotalPage = t_records.ToString();
+            item.PageSize = pagesize.ToString();
+            item.TotalRecord = totalItems.ToString();
+            item.items = farmOwners;
+            result.Add(item);
+
+            return result;
+        }
 
     }
 }
