@@ -1,12 +1,14 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -30,9 +32,7 @@ namespace API_PCC.Controllers
         {
             try
             {
-                var feedingSystemList = _context.HFeedingSystems.Where(feedingSystem => !feedingSystem.DeleteFlag &&
-                                                                                        (feedingSystem.FeedingSystemCode.Contains(searchFilter.searchParam) || 
-                                                                                         feedingSystem.FeedingSystemDesc.Contains(searchFilter.searchParam))).ToList();
+                List<HFeedingSystem> feedingSystemList = await buildFeedingSystemSearchQuery(searchFilter).ToListAsync();
 
                 var result = buildFeedingSystemPagedModel(searchFilter, feedingSystemList);
                 return Ok(result);
@@ -42,6 +42,21 @@ namespace API_PCC.Controllers
             {
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private IQueryable<HFeedingSystem> buildFeedingSystemSearchQuery(CommonSearchFilterModel searchFilter)
+        {
+            IQueryable<HFeedingSystem> query = _context.HFeedingSystems;
+
+            query = query.Where(feedingSystem => !feedingSystem.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(feedingSystem => feedingSystem.FeedingSystemCode.Contains(searchFilter.searchParam) ||
+                                                 feedingSystem.FeedingSystemDesc.Contains(searchFilter.searchParam));
+
+            return query;
         }
 
         // GET: FeedingSystems/search/5

@@ -10,6 +10,8 @@ using API_PCC.Manager;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Linq.Dynamic.Core;
 
 namespace API_PCC.Controllers
 {
@@ -25,15 +27,13 @@ namespace API_PCC.Controllers
             _context = context;
         }
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<UserTypePagedModel>>> list(CommonSearchFilterModel searchFilter)
+        public async Task<ActionResult<IEnumerable<UserTypePagedModel>>> list(UserTypeSearchFilterModel searchFilter)
         {
             searchFilter.searchParam = StringSanitizer.sanitizeString(searchFilter.searchParam);
-
+                
             try
             {
-                var userTypeList = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag &&
-                                                                                (userType.code.Equals(searchFilter.searchParam) || 
-                                                                                 userType.name.Equals(searchFilter.searchParam))).ToList();
+                List<TblUserTypeModel> userTypeList = await buildUserTypeSearchQuery(searchFilter).ToListAsync();
 
                 var result = buildUserTypePagedModel(searchFilter, userTypeList);
                 return Ok(result);
@@ -43,7 +43,41 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
-        private List<UserTypePagedModel> buildUserTypePagedModel(CommonSearchFilterModel searchFilter, List<TblUserTypeModel> userTypes)
+
+        private IQueryable<TblUserTypeModel> buildUserTypeSearchQuery(UserTypeSearchFilterModel searchFilter)
+        {
+            IQueryable<TblUserTypeModel> query = _context.tblUserTypeModels.Where(userType => !userType.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(userType =>
+                               userType.code.Equals(searchFilter.searchParam) ||
+                               userType.name.Equals(searchFilter.searchParam));
+
+
+            if (!searchFilter.sortBy.Field.IsNullOrEmpty())
+            {
+
+                if (!searchFilter.sortBy.Sort.IsNullOrEmpty())
+                {
+                    query = query.OrderBy(searchFilter.sortBy.Field + " " + searchFilter.sortBy.Sort);
+                }
+                else
+                {
+                    query = query.OrderBy(searchFilter.sortBy.Field + " asc");
+
+                }
+            }
+            else
+            {
+                query = query.OrderByDescending(herd => herd.Id);
+            }
+
+            return query;
+        }
+
+        private List<UserTypePagedModel> buildUserTypePagedModel(UserTypeSearchFilterModel searchFilter, List<TblUserTypeModel> userTypes)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
@@ -73,68 +107,6 @@ namespace API_PCC.Controllers
             result.Add(item);
 
             return result;
-        }
-
-        private SqlParameter[] populateSearchSqlParameters(CommonSearchFilterModel searchFilterModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "SearchParam",
-                Value = searchFilterModel.searchParam ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-        private SqlParameter[] populateSqlParameters(string name)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Name",
-                Value = name ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private List<TblUserTypeModel> convertDataRowListToUserTypeList(List<DataRow> dataRowList)
-        {
-            var userTypeList = new List<TblUserTypeModel>();
-
-            foreach (DataRow dataRow in dataRowList)
-            {
-                var userType = DataRowToObject.ToObject<TblUserTypeModel>(dataRow);
-                userTypeList.Add(userType);
-            }
-
-            return userTypeList;
-        }
-
-        private TblUserTypeModel convertDataRowToUserType(DataRow dataRow)
-        {
-            return DataRowToObject.ToObject<TblUserTypeModel>(dataRow);
         }
 
         // GET: userType/search/5

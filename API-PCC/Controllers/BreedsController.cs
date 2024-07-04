@@ -32,7 +32,7 @@ namespace API_PCC.Controllers
         {
             try
             {
-                var breedList = await buildHerdSearchQuery(searchFilter).ToListAsync();
+                var breedList = await buildBreedSearchQuery(searchFilter).ToListAsync();
                 var result = buildHerdClassificationPagedModel(searchFilter, breedList);
                 return Ok(result);
             }
@@ -42,7 +42,7 @@ namespace API_PCC.Controllers
             }
         }
 
-        private IQueryable<ABreed> buildHerdSearchQuery(CommonSearchFilterModel searchFilter)
+        private IQueryable<ABreed> buildBreedSearchQuery(CommonSearchFilterModel searchFilter)
         {
             IQueryable<ABreed> query = _context.ABreeds;
 

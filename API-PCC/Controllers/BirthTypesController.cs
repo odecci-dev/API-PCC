@@ -2,12 +2,14 @@
 using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 namespace API_PCC.Controllers
@@ -29,9 +31,8 @@ namespace API_PCC.Controllers
         {
             try
             {
-                var birthTypeList = _context.ABirthTypes.Where(birthType => !birthType.DeleteFlag && (
-                                                                             birthType.BirthTypeCode.Equals(searchFilter.searchParam) ||
-                                                                             birthType.BirthTypeDesc.Equals(searchFilter.searchParam))).ToList();
+                List<ABirthType> birthTypeList = await buildBirthTypeSearchQuery(searchFilter).ToListAsync();
+
                 var result = buildBirthTypesPagedModel(searchFilter, birthTypeList);
                 return Ok(result);
             }
@@ -39,6 +40,20 @@ namespace API_PCC.Controllers
             {
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private IQueryable<ABirthType> buildBirthTypeSearchQuery(BirthTypesSearchFilterModel searchFilter)
+        {
+            IQueryable<ABirthType> query = _context.ABirthTypes.Where(birthType => !birthType.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(birthType =>
+                               birthType.BirthTypeCode.Equals(searchFilter.searchParam) ||
+                               birthType.BirthTypeDesc.Equals(searchFilter.searchParam));
+
+            return query;
         }
 
         private List<BirthTypesPagedModel> buildBirthTypesPagedModel(BirthTypesSearchFilterModel searchFilter, List<ABirthType> birthTypes)
@@ -84,21 +99,6 @@ namespace API_PCC.Controllers
             }
 
             return birthTypeList;
-        }
-
-        private SqlParameter[] populateSqlParameters(BirthTypesSearchFilterModel searchFilterModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "SearchParam",
-                Value = searchFilterModel.searchParam ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
         }
 
         // GET: BirthTypes/search/5

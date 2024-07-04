@@ -1,12 +1,14 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -30,16 +32,27 @@ namespace API_PCC.Controllers
         {
             try
             {
-                var queryResult = await _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag && 
-                                                                               (buffaloType.BreedTypeCode.Equals(searchFilter.searchParam) || 
-                                                                                buffaloType.BreedTypeDesc.Equals(searchFilter.searchParam))).ToListAsync();
-                var result = buildBuffaloTypesPagedModel(searchFilter, queryResult);
+                List<HBuffaloType> buffaloTypeList = await buildBuffaloTypeSearchQuery(searchFilter).ToListAsync();
+                var result = buildBuffaloTypesPagedModel(searchFilter, buffaloTypeList);
                 return Ok(result); ;
             }
             catch (Exception ex)
             {
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private IQueryable<HBuffaloType> buildBuffaloTypeSearchQuery(CommonSearchFilterModel searchFilter)
+        {
+            IQueryable<HBuffaloType> query = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(buffaloType =>
+                                buffaloType.BreedTypeCode.Equals(searchFilter.searchParam) ||
+                                buffaloType.BreedTypeDesc.Equals(searchFilter.searchParam));
+            return query;
         }
 
         // GET: BuffaloTypes/search/5

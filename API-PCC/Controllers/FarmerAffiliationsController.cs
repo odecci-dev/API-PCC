@@ -1,12 +1,14 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -31,9 +33,8 @@ namespace API_PCC.Controllers
         {
             try
             {
-                var farmerAffiliationList = _context.HFarmerAffiliations.Where(farmerAffiliation => !farmerAffiliation.DeleteFlag &&
-                                                                                                    (farmerAffiliation.FCode.Equals(searchFilter.searchParam) || 
-                                                                                                     farmerAffiliation.FDesc.Equals(searchFilter.searchParam))).ToList();
+                List<HFarmerAffiliation> farmerAffiliationList = await buildFarmerAffiliationSearchQuery(searchFilter).ToListAsync();
+
                 var result = buildFarmerAffiliationPagedModel(searchFilter, farmerAffiliationList);
                 return Ok(result);
             }
@@ -41,6 +42,21 @@ namespace API_PCC.Controllers
             {
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private IQueryable<HFarmerAffiliation> buildFarmerAffiliationSearchQuery(CommonSearchFilterModel searchFilter)
+        {
+            IQueryable<HFarmerAffiliation> query = _context.HFarmerAffiliations;
+
+            query = query.Where(farmerAffiliation => !farmerAffiliation.DeleteFlag);
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(farmerAffiliation =>
+                               farmerAffiliation.FCode.Equals(searchFilter.searchParam) ||
+                               farmerAffiliation.FDesc.Equals(searchFilter.searchParam));
+
+            return query;
         }
 
         // GET: FarmerAffiliations/search/5

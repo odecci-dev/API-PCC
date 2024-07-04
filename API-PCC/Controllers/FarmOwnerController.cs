@@ -13,6 +13,7 @@ using System.Data;
 using System.Drawing.Printing;
 using System.Data;
 using System.Data.SqlClient;
+using Microsoft.IdentityModel.Tokens;
 
 namespace API_PCC.Controllers
 {
@@ -35,8 +36,8 @@ namespace API_PCC.Controllers
             searchFilter.searchValue = StringSanitizer.sanitizeString(searchFilter.searchValue);
             try
             {
-                var farmOwnerList = _context.TblFarmOwners.Where(farmOwner => farmOwner.FirstName.Equals(searchFilter.searchValue) &&
-                                                                              farmOwner.LastName.Equals(searchFilter.searchValue)).ToList();
+                List<TblFarmOwner> farmOwnerList = await buildFarmOwnerSearchQuery(searchFilter).ToListAsync();
+
                 var result = buildFarmOwnerPagedModel(searchFilter, farmOwnerList);
                 return Ok(result);
             }
@@ -44,6 +45,19 @@ namespace API_PCC.Controllers
             {
                 return Problem(ex.GetBaseException().ToString());
             }
+        }
+
+        private IQueryable<TblFarmOwner> buildFarmOwnerSearchQuery(FarmOwnerSearchFilterModel searchFilter)
+        {
+            IQueryable<TblFarmOwner> query = _context.TblFarmOwners;
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchValue.IsNullOrEmpty())
+                query = query.Where(farmOwner => farmOwner.FirstName.Equals(searchFilter.searchValue) &&
+                                                 farmOwner.LastName.Equals(searchFilter.searchValue));
+
+            return query;
         }
 
         // GET: farmOwners/search/5
