@@ -1,12 +1,14 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -19,7 +21,6 @@ namespace API_PCC.Controllers
     {
 
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public FeedingSystemsController(PCC_DEVContext context)
         {
@@ -31,8 +32,9 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFeedingSystemSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildFeedingSystemPagedModel(searchFilter, queryResult);
+                List<HFeedingSystem> feedingSystemList = await buildFeedingSystemSearchQuery(searchFilter).ToListAsync();
+
+                var result = buildFeedingSystemPagedModel(searchFilter, feedingSystemList);
                 return Ok(result);
             }
 
@@ -42,85 +44,19 @@ namespace API_PCC.Controllers
             }
         }
 
-        private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
+        private IQueryable<HFeedingSystem> buildFeedingSystemSearchQuery(CommonSearchFilterModel searchFilter)
         {
+            IQueryable<HFeedingSystem> query = _context.HFeedingSystems;
 
-            var sqlParameters = new List<SqlParameter>();
+            query = query.Where(feedingSystem => !feedingSystem.DeleteFlag);
 
-            if (searchFilter.searchParam != null && searchFilter.searchParam != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchParam ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
+            // assuming that you return all records when nothing is specified in the filter
 
-            return sqlParameters.ToArray();
-        }
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(feedingSystem => feedingSystem.FeedingSystemCode.Contains(searchFilter.searchParam) ||
+                                                 feedingSystem.FeedingSystemDesc.Contains(searchFilter.searchParam));
 
-        private List<FeedingSystemPagedModel> buildFeedingSystemPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
-        {
-
-            int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
-            int page = searchFilter.page == 0 ? 1 : searchFilter.page;
-            var items = (dynamic)null;
-
-            int totalItems = dt.Rows.Count;
-            int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
-
-            var feedingSystemModels = convertDataRowListToFeedingSystemlist(items);
-            List<FeedingSystemResponseModel> feedingSystemResponseModels = convertFeedingSystemListToResponseModelList(feedingSystemModels);
-
-            var result = new List<FeedingSystemPagedModel>();
-            var item = new FeedingSystemPagedModel();
-
-            int pages = searchFilter.page == 0 ? 1 : searchFilter.page;
-            item.CurrentPage = searchFilter.page == 0 ? "1" : searchFilter.page.ToString();
-            int page_prev = pages - 1;
-
-            double t_records = Math.Ceiling(Convert.ToDouble(totalItems) / Convert.ToDouble(pagesize));
-            int page_next = searchFilter.page >= t_records ? 0 : pages + 1;
-            item.NextPage = items.Count % pagesize >= 0 ? page_next.ToString() : "0";
-            item.PrevPage = pages == 1 ? "0" : page_prev.ToString();
-            item.TotalPage = t_records.ToString();
-            item.PageSize = pagesize.ToString();
-            item.TotalRecord = totalItems.ToString();
-            item.items = feedingSystemResponseModels;
-            result.Add(item);
-
-            return result;
-        }
-
-        private List<HFeedingSystem> convertDataRowListToFeedingSystemlist(List<DataRow> dataRowList)
-        {
-            var feedingSystemList = new List<HFeedingSystem>();
-
-            foreach (DataRow dataRow in dataRowList)
-            {
-                var feedingSystemModel = DataRowToObject.ToObject<HFeedingSystem>(dataRow);
-                feedingSystemList.Add(feedingSystemModel);
-            }
-
-            return feedingSystemList;
-        }
-
-        private List<FeedingSystemResponseModel> convertFeedingSystemListToResponseModelList(List<HFeedingSystem> feedingSystemList)
-        {
-            var feedingSystemResponseModels = new List<FeedingSystemResponseModel>();
-
-            foreach (HFeedingSystem feedingSystem in feedingSystemList)
-            {
-                var feedingSystemResponseModel = new FeedingSystemResponseModel()
-                {
-                    feedingSystemCode = feedingSystem.FeedingSystemCode,
-                    feedingSystemDesc = feedingSystem.FeedingSystemDesc
-                };
-                feedingSystemResponseModels.Add(feedingSystemResponseModel);
-            }
-            return feedingSystemResponseModels;
+            return query;
         }
 
         // GET: FeedingSystems/search/5
@@ -256,7 +192,6 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
-        
 
         // GET: FeedingSystems/view
         [HttpGet]
@@ -306,9 +241,54 @@ namespace API_PCC.Controllers
             }
         }
 
-        private bool HFeedingSystemExists(int id)
+        private List<FeedingSystemPagedModel> buildFeedingSystemPagedModel(CommonSearchFilterModel searchFilter, List<HFeedingSystem> feedingSystems)
         {
-            return (_context.HFeedingSystems?.Any(e => e.Id == id)).GetValueOrDefault();
+
+            int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
+            int page = searchFilter.page == 0 ? 1 : searchFilter.page;
+            var items = (dynamic)null;
+
+            int totalItems = feedingSystems.Count;
+            int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
+            items = feedingSystems.Skip((page - 1) * pagesize).Take(pagesize).ToList();
+
+            List<FeedingSystemResponseModel> feedingSystemResponseModels = convertFeedingSystemListToResponseModelList(feedingSystems);
+
+            var result = new List<FeedingSystemPagedModel>();
+            var item = new FeedingSystemPagedModel();
+
+            int pages = searchFilter.page == 0 ? 1 : searchFilter.page;
+            item.CurrentPage = searchFilter.page == 0 ? "1" : searchFilter.page.ToString();
+            int page_prev = pages - 1;
+
+            double t_records = Math.Ceiling(Convert.ToDouble(totalItems) / Convert.ToDouble(pagesize));
+            int page_next = searchFilter.page >= t_records ? 0 : pages + 1;
+            item.NextPage = items.Count % pagesize >= 0 ? page_next.ToString() : "0";
+            item.PrevPage = pages == 1 ? "0" : page_prev.ToString();
+            item.TotalPage = t_records.ToString();
+            item.PageSize = pagesize.ToString();
+            item.TotalRecord = totalItems.ToString();
+            item.items = feedingSystemResponseModels;
+            result.Add(item);
+
+            return result;
         }
+
+        private List<FeedingSystemResponseModel> convertFeedingSystemListToResponseModelList(List<HFeedingSystem> feedingSystemList)
+        {
+            var feedingSystemResponseModels = new List<FeedingSystemResponseModel>();
+
+            foreach (HFeedingSystem feedingSystem in feedingSystemList)
+            {
+                var feedingSystemResponseModel = new FeedingSystemResponseModel()
+                {
+                    feedingSystemCode = feedingSystem.FeedingSystemCode,
+                    feedingSystemDesc = feedingSystem.FeedingSystemDesc
+                };
+                feedingSystemResponseModels.Add(feedingSystemResponseModel);
+            }
+            return feedingSystemResponseModels;
+        }
+
     }
 }

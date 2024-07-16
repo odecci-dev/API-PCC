@@ -8,7 +8,7 @@
         public DateTime? DateCreated { get; set; }
 
         public DateTime? DateUpdated { get; set; }
-        public bool? DeleteFlag { get; set; }
+        public bool DeleteFlag { get; set; }
 
         public string CreatedBy { get; set; }
 

@@ -26,7 +26,7 @@ namespace API_PCC.Controllers
             _context = context;
         }
 
-        // POST: BirthTypes/list
+        // POST: Transfer/list
         [HttpPost]
         public async Task<ActionResult<IEnumerable<TransferModel>>> list(CommonSearchFilterModel searchFilter)
         {
@@ -44,7 +44,7 @@ namespace API_PCC.Controllers
 
         // GET: Transfer/search/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ABirthType>> search(int id)
+        public async Task<ActionResult<TransferModel>> search(int id)
         {
             if (_context.TransferModels == null)
             {
@@ -246,7 +246,7 @@ namespace API_PCC.Controllers
                                 .ToListAsync();
         }
 
-        // POST: BirthTypes/restore/
+        // POST: Transfer/restore/
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)

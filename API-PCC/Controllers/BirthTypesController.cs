@@ -2,12 +2,14 @@
 using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 namespace API_PCC.Controllers
@@ -18,7 +20,6 @@ namespace API_PCC.Controllers
     public class BirthTypesController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
         public BirthTypesController(PCC_DEVContext context)
         {
             _context = context;
@@ -30,8 +31,9 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBirthTypeSearchQueryByBirthTypeCodeOrBirthTypeDesc(), null, populateSqlParameters(searchFilter));
-                var result = buildBirthTypesPagedModel(searchFilter, queryResult);
+                List<ABirthType> birthTypeList = await buildBirthTypeSearchQuery(searchFilter).ToListAsync();
+
+                var result = buildBirthTypesPagedModel(searchFilter, birthTypeList);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -40,7 +42,21 @@ namespace API_PCC.Controllers
             }
         }
 
-        private List<BirthTypesPagedModel> buildBirthTypesPagedModel(BirthTypesSearchFilterModel searchFilter, DataTable dt)
+        private IQueryable<ABirthType> buildBirthTypeSearchQuery(BirthTypesSearchFilterModel searchFilter)
+        {
+            IQueryable<ABirthType> query = _context.ABirthTypes.Where(birthType => !birthType.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(birthType =>
+                               birthType.BirthTypeCode.Equals(searchFilter.searchParam) ||
+                               birthType.BirthTypeDesc.Equals(searchFilter.searchParam));
+
+            return query;
+        }
+
+        private List<BirthTypesPagedModel> buildBirthTypesPagedModel(BirthTypesSearchFilterModel searchFilter, List<ABirthType> birthTypes)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
@@ -48,11 +64,9 @@ namespace API_PCC.Controllers
             int totalItems = 0;
             int totalPages = 0;
 
-            totalItems = dt.Rows.Count;
+            totalItems = birthTypes.Count;
             totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
-
-            var birthTypes = convertDataRowListToBirthTypeList(items);
+            items = birthTypes.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
             var result = new List<BirthTypesPagedModel>();
             var item = new BirthTypesPagedModel();
@@ -85,21 +99,6 @@ namespace API_PCC.Controllers
             }
 
             return birthTypeList;
-        }
-
-        private SqlParameter[] populateSqlParameters(BirthTypesSearchFilterModel searchFilterModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "SearchParam",
-                Value = searchFilterModel.searchParam ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
         }
 
         // GET: BirthTypes/search/5
@@ -275,9 +274,5 @@ namespace API_PCC.Controllers
             }
         }
 
-        private bool ABirthTypeExists(int id)
-        {
-            return (_context.ABirthTypes?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
     }
 }

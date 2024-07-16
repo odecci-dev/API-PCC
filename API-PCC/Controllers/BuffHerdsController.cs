@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq.Dynamic.Core;
@@ -21,8 +22,6 @@ namespace API_PCC.Controllers
     [ApiController]
     public class HBuffHerdsController : ControllerBase
     {
-        DbManager db = new DbManager();
-
         private readonly PCC_DEVContext _context;
 
         public HBuffHerdsController(PCC_DEVContext context)
@@ -150,27 +149,27 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, BuffHerdUpdateModel registrationModel)
         {
-
-            DataTable buffHerdDataTable = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdSelectQueryById(), null, populateSqlParameters(id));
-
-            if (buffHerdDataTable.Rows.Count == 0)
+            var buffHerdRecord = _context.HBuffHerds.Where(buffHerd => !buffHerd.DeleteFlag &&
+                                                                        buffHerd.Id.Equals(id)).FirstOrDefault();
+            if (buffHerdRecord == null)
             {
                 return Conflict("No records matched!");
             }
 
-            DataTable herdCLassificationRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryByHerdClassDesc(), null, populateSqlParametersHerdClassDesc(registrationModel.HerdClassDesc));
-
-            if (herdCLassificationRecord.Rows.Count == 0)
+            var herdClassificationRecord = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                      herdClassification.HerdClassDesc.Equals(registrationModel.HerdClassDesc)).FirstOrDefault();
+            if (herdClassificationRecord == null)
             {
                 return Conflict("No Herd Classification records matched!");
             }
 
-            //var buffHerd = convertDataRowToHerdModel(buffHerdDataTable.Rows[0]);
-
-            DataTable buffHerdDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdSelectDuplicateQueryByIdHerdNameHerdCode(), null, populateSqlParameters(id, registrationModel));
+            var buffHerdDuplicateCheck = _context.HBuffHerds.Where(buffHerd => !buffHerd.DeleteFlag &&
+                                                                                buffHerd.Id.Equals(id) &&
+                                                                                buffHerd.HerdName.Equals(registrationModel.HerdName) &&
+                                                                                buffHerd.HerdCode.Equals(registrationModel.HerdCode)).FirstOrDefault();
 
             // check for duplication
-            if (buffHerdDuplicateCheck.Rows.Count > 0)
+            if (buffHerdDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");   
             }
@@ -180,24 +179,23 @@ namespace API_PCC.Controllers
                     .Include(x => x.feedingSystem)
                     .Single(x => x.Id == id);
 
-            DataTable farmOwnerRecordsCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFarmOwnerSearchQueryById(), null, populateSqlParameters(buffHerd.Owner));
+            var farmOwnerRecord = _context.TblFarmOwners.Where(farmOwner => farmOwner.Id.Equals(buffHerd.Owner)).FirstOrDefault();
 
-            if (farmOwnerRecordsCheck.Rows.Count == 0)
+            if (farmOwnerRecord == null)
             {
                 return Conflict("Farm owner does not exists");
             }
 
-            string farmOwner_update = $@"UPDATE [dbo].[tbl_FarmOwner] SET 
-                                             [FirstName] = '" + registrationModel.Owner.FirstName + "'" +
-                                            ",[LastName] = '" + registrationModel.Owner.LastName + "'" +
-                                            ",[Address] = '" + registrationModel.Owner.Address + "'" +
-                                            ",[TelephoneNumber] = '" + registrationModel.Owner.TelNo + "'" +
-                                            ",[MobileNumber] = '" + registrationModel.Owner.MNo + "'" +
-                                            ",[Email] = '" + registrationModel.Owner.Email + "'" +
-                                            " WHERE id = " + buffHerd.Owner;
-            string result = db.DB_WithParam(farmOwner_update);
+            farmOwnerRecord.FirstName = registrationModel.Owner.FirstName;
+            farmOwnerRecord.LastName = registrationModel.Owner.LastName;
+            farmOwnerRecord.Address = registrationModel.Owner.Address;
+            farmOwnerRecord.TelephoneNumber = registrationModel.Owner.TelNo;
+            farmOwnerRecord.MobileNumber = registrationModel.Owner.MNo;
+            farmOwnerRecord.Email = registrationModel.Owner.Email;
 
-            var farmOwner = convertDataRowToFarmOwnerEntity(farmOwnerRecordsCheck.Rows[0]);
+            _context.Entry(farmOwnerRecord).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
 
             try
             {
@@ -208,12 +206,12 @@ namespace API_PCC.Controllers
 
                 populateFeedingSystemAndBuffaloType(buffHerd, registrationModel);
 
-                buffHerd.Owner = farmOwner.Id;
+                buffHerd.Owner = farmOwnerRecord.Id;
                 buffHerd.DateUpdated = DateTime.Now;
                 buffHerd.UpdatedBy = registrationModel.UpdatedBy;
 
                 _context.Entry(buffHerd).State = EntityState.Modified;
-                 _context.SaveChanges();
+                _context.SaveChanges();
 
                 return Ok("Update Successful!");
             }
@@ -232,43 +230,39 @@ namespace API_PCC.Controllers
 
             try
             {
-                DataTable buffHerdDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdDuplicateCheckSaveQuery(), null, populateSqlParameters(registrationModel.HerdName, registrationModel.HerdCode));
-
-                if (buffHerdDuplicateCheck.Rows.Count > 0)
+                var buffHerdDuplicateCheck = _context.HBuffHerds.Where(buffHerd => !buffHerd.DeleteFlag &&
+                                                                                   (buffHerd.HerdName.Equals(registrationModel.HerdName) ||
+                                                                                    buffHerd.HerdCode.Equals(registrationModel.HerdCode))).FirstOrDefault();
+                if (buffHerdDuplicateCheck != null)
                 {
                     return Conflict("Herd already exists");
                 }
 
                 var BuffHerdModel = buildBuffHerd(registrationModel);
-                DataTable farmOwnerRecordsCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFarmOwnerSearchQueryByFirstNameAndLastName(), null, populateSqlParametersFarmer(registrationModel.Owner));
-            
-                if (farmOwnerRecordsCheck.Rows.Count == 0)
+
+                var farmOwnerRecordsCheck = _context.TblFarmOwners.Where(farmOwner => farmOwner.FirstName.Equals(registrationModel.Owner.FirstName) &&
+                                                                                      farmOwner.LastName.Equals(registrationModel.Owner.LastName)).FirstOrDefault();
+
+                if (farmOwnerRecordsCheck == null)
                 {
                     // Create new Farm Owner Record
-                    string user_insert = $@"INSERT INTO [dbo].[tbl_FarmOwner]
-                                                ([FirstName]
-                                                ,[LastName]
-                                                ,[Address]
-                                                ,[TelephoneNumber]
-                                                ,[MobileNumber]
-                                                ,[Email])
-                                            VALUES
-                                                ('" + registrationModel.Owner.FirstName + "'" +
-                                                ",'" + registrationModel.Owner.LastName + "'," +
-                                                "'" + registrationModel.Owner.Address + "'," +
-                                                "'" + registrationModel.Owner.TelNo + "'," +
-                                                "'" + registrationModel.Owner.MNo + "'," +
-                                                "'" + registrationModel.Owner.Email + "')";
-                    string test = db.DB_WithParam(user_insert);
+                    var farmOwner = new TblFarmOwner()
+                    {
+                        FirstName = registrationModel.Owner.FirstName,
+                        LastName = registrationModel.Owner.LastName,
+                        Address = registrationModel.Owner.Address,
+                        TelephoneNumber = registrationModel.Owner.TelNo,
+                        MobileNumber = registrationModel.Owner.MNo,
+                        Email = registrationModel.Owner.Email
+                    };
 
-                    DataTable farmOwnerRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFarmOwnerSearchQueryByFirstNameAndLastName(), null, populateSqlParametersFarmer(registrationModel.Owner));
+                    _context.Entry(farmOwner).State = EntityState.Modified;
+                    _context.SaveChanges();
 
-                    var farmOwner = convertDataRowToFarmOwnerEntity(farmOwnerRecord.Rows[0]);
                     BuffHerdModel.Owner = farmOwner.Id;
                 } else
                 {
-                    var farmOwner = convertDataRowToFarmOwnerEntity(farmOwnerRecordsCheck.Rows[0]);
-                    BuffHerdModel.Owner = farmOwner.Id;
+                    BuffHerdModel.Owner = farmOwnerRecordsCheck.Id;
                 }
 
                 populateFeedingSystemAndBuffaloType(BuffHerdModel, registrationModel);
@@ -295,26 +289,26 @@ namespace API_PCC.Controllers
 
             foreach (string breedTypeCode in baseModel.BreedTypeCodes)
             {
-                DataTable buffaloType = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQueryByBreedTypeCode(), null, populateSqlParametersBuffaloType(breedTypeCode));
-                if (buffaloType.Rows.Count == 0)
+                var buffaloType = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag &&
+                                                                               buffaloType.BreedTypeCode.Equals(breedTypeCode)).FirstOrDefault();
+                if (buffaloType == null)
                 {
                     break;
                 }
-                var buffaloTypeRecord = convertDataRowToBuffaloType(buffaloType.Rows[0]);
-                _context.Attach(buffaloTypeRecord);
-                buffHerd.buffaloType.Add(buffaloTypeRecord);
+                _context.Attach(buffaloType);
+                buffHerd.buffaloType.Add(buffaloType);
             }
 
             foreach (string feedingSystemCode in baseModel.FeedingSystemCodes)
             {
-                DataTable feedingSystem = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFeedingSystemSearchByFeedingSystemCode(), null, populateSqlParametersFeedingSystem(feedingSystemCode));
-                if (feedingSystem.Rows.Count == 0)
+                var feedingSystem = _context.HFeedingSystems.Where(feedingSystem => !feedingSystem.DeleteFlag &&
+                                                                                     feedingSystem.FeedingSystemCode.Equals(feedingSystemCode)).FirstOrDefault();
+                if (feedingSystem == null)
                 {
                     break;
                 }
-                var feedingSystemRecord = convertDataRowToFeedingSystem(feedingSystem.Rows[0]);
-                _context.Attach(feedingSystemRecord);
-                buffHerd.feedingSystem.Add(feedingSystemRecord);
+                _context.Attach(feedingSystem);
+                buffHerd.feedingSystem.Add(feedingSystem);
             }
         }
 
@@ -363,31 +357,31 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
         {
-            DataTable dt = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdSelectForRestoreQuery(), null, populateSqlParameters(restorationModel.id));
 
-            if (dt.Rows.Count == 0)
+            var buffHerd = _context.HBuffHerds.Where(buffHerd => buffHerd.DeleteFlag && 
+                                                                 buffHerd.Id.Equals(restorationModel.id)).FirstOrDefault();
+            if (buffHerd == null)
             {
                 return Conflict("No deleted records matched!");
             }
-            
-            var herdModel = convertDataRowToHerdModel(dt.Rows[0]);
 
-            DataTable buffHerdDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdDuplicateCheckSaveQuery(), null, populateSqlParameters(herdModel.HerdName, herdModel.HerdCode));
-
-            if (buffHerdDuplicateCheck.Rows.Count > 0)
+            var buffHerdDuplicateCheck = _context.HBuffHerds.Where(buffHerd => !buffHerd.DeleteFlag &&
+                                                                               (buffHerd.HerdName.Equals(buffHerd.HerdName) ||
+                                                                                buffHerd.HerdCode.Equals(buffHerd.HerdCode))).FirstOrDefault();
+            if (buffHerdDuplicateCheck != null)
             {
                 return Conflict("Entity already exists!!");
             }
 
             try
             {
-                herdModel.DeleteFlag = !herdModel.DeleteFlag;
-                herdModel.DateDeleted = null;
-                herdModel.DeletedBy = "";
-                herdModel.DateRestored = DateTime.Now;
-                herdModel.RestoredBy = restorationModel.restoredBy;
+                buffHerd.DeleteFlag = !buffHerd.DeleteFlag;
+                buffHerd.DateDeleted = null;
+                buffHerd.DeletedBy = "";
+                buffHerd.DateRestored = DateTime.Now;
+                buffHerd.RestoredBy = restorationModel.restoredBy;
 
-                _context.Entry(herdModel).State = EntityState.Modified;
+                _context.Entry(buffHerd).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
                 return Ok("Restoration Successful!");
             }
@@ -558,9 +552,8 @@ namespace API_PCC.Controllers
 
         private Owner populateOwner(int ownerId)
         {
-            DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildFarmOwnerSearchQueryById(), null, populateSqlParameters(ownerId));
-
-            if (queryResult.Rows.Count == 0)
+            var farmOwner = _context.TblFarmOwners.Where(farmOwner => farmOwner.Id.Equals(ownerId)).FirstOrDefault();
+            if (farmOwner == null)
             {
                 return new Owner()
                 {
@@ -572,16 +565,14 @@ namespace API_PCC.Controllers
                     TelNo = string.Empty
                 };
             }
-            var farmOwnerEntity = convertDataRowToFarmOwnerEntity(queryResult.Rows[0]);
-
             var owner = new Owner()
             {
-                FirstName = farmOwnerEntity.FirstName,
-                LastName = farmOwnerEntity.LastName,
-                Address = farmOwnerEntity.Address,
-                Email = farmOwnerEntity.Email,
-                MNo = farmOwnerEntity.MobileNumber,
-                TelNo = farmOwnerEntity.TelephoneNumber
+                FirstName = farmOwner.FirstName,
+                LastName = farmOwner.LastName,
+                Address = farmOwner.Address,
+                Email = farmOwner.Email,
+                MNo = farmOwner.MobileNumber,
+                TelNo = farmOwner.TelephoneNumber
             };
 
             return owner;
@@ -589,8 +580,9 @@ namespace API_PCC.Controllers
 
         private HHerdClassification populateHerdClassification(string herdClassDesc)
         {
-            DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryByHerdClassDesc(), null, populateSqlParametersHerdClassDesc(herdClassDesc));
-            if (queryResult.Rows.Count == 0)
+            var herdClassification = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                herdClassification.HerdClassDesc.Equals(herdClassDesc)).FirstOrDefault();
+            if (herdClassification == null)
             {
                 return new HHerdClassification()
                 {
@@ -601,241 +593,8 @@ namespace API_PCC.Controllers
                     LevelTo = string.Empty,
                 };
             }
-            var herdClassificationEntity = convertDataRowToHerdClassification(queryResult.Rows[0]);
-
-            var herdClassification = new HHerdClassification()
-            {
-                HerdClassCode = herdClassificationEntity.HerdClassCode,
-                HerdClassDesc = herdClassificationEntity.HerdClassDesc,
-                Status = herdClassificationEntity.Status,
-                LevelFrom = herdClassificationEntity.LevelFrom,
-                LevelTo = herdClassificationEntity.LevelTo,
-            };
-
 
             return herdClassification;
-        }
-
-        private SqlParameter[] populateSqlParameters(BuffHerdSearchFilterModel searchFilter)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchValue != null && searchFilter.searchValue != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchValue ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.filterBy != null)
-            {
-                if (searchFilter.filterBy.BreedTypeCode != null && searchFilter.filterBy.BreedTypeCode != "")
-                {
-                    sqlParameters.Add(new SqlParameter
-                    {
-                        ParameterName = "BreedTypeCode",
-                        Value = searchFilter.filterBy.BreedTypeCode ?? Convert.DBNull,
-                        SqlDbType = System.Data.SqlDbType.VarChar,
-                    });
-                }
-
-                if (searchFilter.filterBy.HerdClassDesc != null && searchFilter.filterBy.HerdClassDesc != "")
-                {
-                    sqlParameters.Add(new SqlParameter
-                    {
-                        ParameterName = "HerdClassDesc",
-                        Value = searchFilter.filterBy.HerdClassDesc ?? Convert.DBNull,
-                        SqlDbType = System.Data.SqlDbType.VarChar,
-                    });
-                }
-
-                if (searchFilter.filterBy.feedingSystemCode != null && searchFilter.filterBy.feedingSystemCode != "")
-                {
-                    sqlParameters.Add(new SqlParameter
-                    {
-                        ParameterName = "FeedingSystemCode",
-                        Value = searchFilter.filterBy.feedingSystemCode ?? Convert.DBNull,
-                        SqlDbType = System.Data.SqlDbType.VarChar,
-                    });
-                }
-            }
-
-            if (searchFilter.dateFrom != null && searchFilter.dateFrom != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "DateFrom",
-                    Value = searchFilter.dateFrom == "" ? Convert.DBNull : searchFilter.dateFrom,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            if (searchFilter.dateTo != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "DateTo",
-                    Value = searchFilter.dateTo == "" ? Convert.DBNull : searchFilter.dateTo,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(String herdCode)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdCode",
-                Value = herdCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(String herdCode, String herdName)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdCode",
-                Value = herdCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdName",
-                Value = herdName ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParametersHerdClassDesc(String herdClassDesc)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassDesc",
-                Value = herdClassDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id, BuffHerdUpdateModel registrationModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdName",
-                Value = registrationModel.HerdName ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdCode",
-                Value = registrationModel.HerdCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParametersFarmer(Owner owner)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "FirstName",
-                Value = owner.FirstName ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "LastName",
-                Value = owner.LastName ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParametersBuffaloType(String breedTypeCode)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeCode",
-                Value = breedTypeCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParametersFeedingSystem(String feedingSystemCode)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "FeedCode",
-                Value = feedingSystemCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
         }
 
         private BuffHerdViewResponseModel populateViewResponseModel(HBuffHerd buffHerd)

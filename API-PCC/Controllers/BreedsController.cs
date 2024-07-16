@@ -7,6 +7,7 @@ using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using NuGet.Protocol.Core.Types;
 using System.Data;
 using System.Data.SqlClient;
@@ -19,7 +20,6 @@ namespace API_PCC.Controllers
     public class BreedsController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public BreedsController(PCC_DEVContext context)
         {
@@ -32,8 +32,8 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildHerdClassificationPagedModel(searchFilter, queryResult);
+                var breedList = await buildBreedSearchQuery(searchFilter).ToListAsync();
+                var result = buildHerdClassificationPagedModel(searchFilter, breedList);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -42,19 +42,32 @@ namespace API_PCC.Controllers
             }
         }
 
+        private IQueryable<ABreed> buildBreedSearchQuery(CommonSearchFilterModel searchFilter)
+        {
+            IQueryable<ABreed> query = _context.ABreeds;
+
+            query = query.Where(breed => !breed.DeleteFlag);
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(breed =>
+                               breed.BreedCode.Contains(searchFilter.searchParam) ||
+                               breed.BreedDesc.Contains(searchFilter.searchParam));
+
+            return query;
+        }
+
         // GET: Breeds/search/5
         [HttpGet("{breedCode}")]
         public async Task<ActionResult<BreedResponseModel>> search(string breedCode)
         {
-            DataTable breedRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedSearchQueryByBreedCode(), null, populateSqlParameters(breedCode));
-
-            if (breedRecord.Rows.Count == 0)
+            var breedRecord = _context.ABreeds.Where(breed => !breed.DeleteFlag && breed.BreedCode.Equals(breedCode)).FirstOrDefault();
+            if (breedRecord == null)
             {
                 return Conflict("No records found!");
             }
 
-            var breedModel = convertDataRowToBreed(breedRecord.Rows[0]);
-            var breedResponseModel = convertBreedToResponseModel(breedModel);
+            var breedResponseModel = convertBreedToResponseModel(breedRecord);
 
             return Ok(breedResponseModel);
         }
@@ -67,13 +80,12 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedSearchQueryAll(), null, new SqlParameter[] { });
-                if (queryResult.Rows.Count == 0)
+                var breedRecords = await _context.ABreeds.Where(breed => !breed.DeleteFlag).ToListAsync();
+                if (breedRecords.Count == 0)
                 {
                     return Conflict("No records found!");
                 }
-                var breedModels = convertDataRowListToBreedList(queryResult.AsEnumerable().ToList());
-                List<BreedResponseModel> breedResponseList = convertBreedListToResponseModelList(breedModels);
+                List<BreedResponseModel> breedResponseList = convertBreedListToResponseModelList(breedRecords);
 
                 return Ok(breedResponseList);
             }
@@ -88,26 +100,26 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, BreedUpdateModel breedUpdateModel)
         {
-            DataTable breedRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedSearchQueryById(), null, populateSqlParameters(id));
-
-            if (breedRecord.Rows.Count == 0)
+            var breedRecord = _context.ABreeds.Where(breed => !breed.DeleteFlag && breed.Id.Equals(id)).FirstOrDefault();
+            if (breedRecord == null)
             {
                 return Conflict("No records matched!");
             }
 
-            DataTable breedDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedDuplicateCheckUpdateQuery(), null, populateSqlParameters(id, breedUpdateModel));
-
+            var breedDuplicateCheck = _context.ABreeds.Where(breed => !breed.DeleteFlag &&
+                                                                       breed.Id.Equals(id) &&
+                                                                       breed.BreedCode.Equals(breedUpdateModel.BreedCode) &&
+                                                                       breed.BreedDesc.Equals(breedUpdateModel.BreedDesc)).FirstOrDefault();
             // check for duplication
-            if (breedDuplicateCheck.Rows.Count > 0)
+            if (breedDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");
             }
 
             try
             {
-                var breedModel = convertDataRowToBreed(breedRecord.Rows[0]);
-                populateBreed(breedModel, breedUpdateModel);
-                _context.Entry(breedModel).State = EntityState.Modified;
+                populateBreed(breedRecord, breedUpdateModel);
+                _context.Entry(breedRecord).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
                 return Ok("Update Successful!");
@@ -125,10 +137,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<ABreed>> save(BreedRegistrationModel breedRegistrationModel)
         {
-            DataTable breedRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedDuplicateCheckSaveQuery(), null, populateSqlParameters(breedRegistrationModel));
+            var breedRecord = _context.ABreeds.Where(breed => !breed.DeleteFlag &&
+                                                               breed.BreedCode.Equals(breedRegistrationModel.BreedCode) &&
+                                                               breed.BreedDesc.Equals(breedRegistrationModel.BreedDesc)).FirstOrDefault();
 
             // check for duplication
-            if (breedRecord.Rows.Count > 0)
+            if (breedRecord != null)
             {
                 return Conflict("Entity already exists");
             }
@@ -166,14 +180,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> delete(DeletionModel deletionModel)
         {
-            DataTable breedRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedSearchQueryById(), null, populateSqlParameters(deletionModel.id));
-
-            if (breedRecord.Rows.Count == 0)
+            var breedModel = _context.ABreeds.Where(breed => !breed.DeleteFlag &&
+                                                               breed.Id.Equals(deletionModel.id)).FirstOrDefault();
+            if (breedModel == null)
             {
                 return Conflict("No records matched!");
             }
-
-            var breedModel = convertDataRowToBreed(breedRecord.Rows[0]);
 
             try
             {
@@ -198,15 +210,13 @@ namespace API_PCC.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
-        {
-            DataTable breedRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBreedDeletedSearchQueryById(), null, populateSqlParameters(restorationModel.id));
+        {            
+            var breedModel = _context.ABreeds.Where(breed => breed.DeleteFlag && breed.Id.Equals(restorationModel.id)).FirstOrDefault();
 
-            if (breedRecord.Rows.Count == 0)
+            if (breedModel == null)
             {
                 return Conflict("No deleted records matched!");
             }
-
-            var breedModel = convertDataRowToBreed(breedRecord.Rows[0]);
 
             try
             {
@@ -226,115 +236,18 @@ namespace API_PCC.Controllers
                 return Problem(ex.GetBaseException().ToString());
             }
         }
-        private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
-        {
 
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchParam != null && searchFilter.searchParam != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchParam ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(string breedCode)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedCode",
-                Value = breedCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(BreedRegistrationModel breedRegistrationModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedCode",
-                Value = breedRegistrationModel.BreedCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedDesc",
-                Value = breedRegistrationModel.BreedDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id, BreedUpdateModel breedUpdateModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedCode",
-                Value = breedUpdateModel.BreedCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedDesc",
-                Value = breedUpdateModel.BreedDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private List<BreedsPagedModel> buildHerdClassificationPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
+        private List<BreedsPagedModel> buildHerdClassificationPagedModel(CommonSearchFilterModel searchFilter, List<ABreed> breedList)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
             var items = (dynamic)null;
 
-            int totalItems = dt.Rows.Count;
+            int totalItems = breedList.Count;
             int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
+            items = breedList.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
-
-            var breedModels = convertDataRowListToBreedList(items);
-            List<BreedResponseModel> breedResponseModels = convertBreedListToResponseModelList(breedModels);
+            List<BreedResponseModel> breedResponseModels = convertBreedListToResponseModelList(items);
 
             var result = new List<BreedsPagedModel>();
             var item = new BreedsPagedModel();
@@ -355,20 +268,7 @@ namespace API_PCC.Controllers
 
             return result;
         }
-
-        private List<ABreed> convertDataRowListToBreedList(List<DataRow> dataRowList)
-        {
-            var herdClassificationList = new List<ABreed>();
-
-            foreach (DataRow dataRow in dataRowList)
-            {
-                var herdClassificationModel = DataRowToObject.ToObject<ABreed>(dataRow);
-                herdClassificationList.Add(herdClassificationModel);
-            }
-
-            return herdClassificationList;
-        }
-
+    
         private List<BreedResponseModel> convertBreedListToResponseModelList(List<ABreed> breedList)
         {
             var breedResponseModels = new List<BreedResponseModel>();
@@ -383,11 +283,6 @@ namespace API_PCC.Controllers
                 breedResponseModels.Add(breedResponseModel);
             }
             return breedResponseModels;
-        }
-
-        private ABreed convertDataRowToBreed(DataRow dataRow) 
-        {
-            return DataRowToObject.ToObject<ABreed>(dataRow);
         }
 
         private BreedResponseModel convertBreedToResponseModel(ABreed breed)

@@ -26,7 +26,6 @@ namespace API_PCC.Controllers
         string Stats = "";
         string Mess = "";
         string JWT = "";
-        DbManager db = new DbManager();
         MailSender _mailSender;
         private readonly PCC_DEVContext _context;
         DBMethods dbmet = new DBMethods();
@@ -315,8 +314,18 @@ namespace API_PCC.Controllers
                     MailSender email =  new MailSender(_emailsettings);
                     email.sendOtpMail(items);
 
-                    string OTPInsert = $@"insert into tbl_RegistrationOTPModel (email,OTP,status) values ('" + userTbl.Email + "','" + otp_res + "','4')";
-                    db.DB_WithParam(OTPInsert);
+                    /*string OTPInsert = $@"insert into tbl_RegistrationOTPModel (email,OTP,status) values ('" + userTbl.Email + "','" + otp_res + "','4')";
+                    db.DB_WithParam(OTPInsert);*/
+
+                    var otpModel = new TblRegistrationOtpmodel()
+                    {
+                        Email = userTbl.Email,
+                        Otp = otp_res,
+                        Status = 4
+                    };
+
+                    _context.TblRegistrationOtpmodels.Add(otpModel);
+                    await _context.SaveChangesAsync();
 
                     Stats = "Ok";
                     Mess = "User is for Verification, OTP Already Send!";

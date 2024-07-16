@@ -1,12 +1,14 @@
 ﻿using API_PCC.ApplicationModels;
 using API_PCC.ApplicationModels.Common;
 using API_PCC.Data;
+using API_PCC.EntityModels;
 using API_PCC.Manager;
 using API_PCC.Models;
 using API_PCC.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -18,7 +20,6 @@ namespace API_PCC.Controllers
     public class BuffaloTypesController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public BuffaloTypesController(PCC_DEVContext context)
         {
@@ -31,8 +32,8 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildBuffaloTypesPagedModel(searchFilter, queryResult);
+                List<HBuffaloType> buffaloTypeList = await buildBuffaloTypeSearchQuery(searchFilter).ToListAsync();
+                var result = buildBuffaloTypesPagedModel(searchFilter, buffaloTypeList);
                 return Ok(result); ;
             }
             catch (Exception ex)
@@ -41,20 +42,29 @@ namespace API_PCC.Controllers
             }
         }
 
+        private IQueryable<HBuffaloType> buildBuffaloTypeSearchQuery(CommonSearchFilterModel searchFilter)
+        {
+            IQueryable<HBuffaloType> query = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag);
+
+            // assuming that you return all records when nothing is specified in the filter
+
+            if (!searchFilter.searchParam.IsNullOrEmpty())
+                query = query.Where(buffaloType =>
+                                buffaloType.BreedTypeCode.Equals(searchFilter.searchParam) ||
+                                buffaloType.BreedTypeDesc.Equals(searchFilter.searchParam));
+            return query;
+        }
+
         // GET: BuffaloTypes/search/5
         [HttpGet("{breedTypeCode}")]
         public async Task<ActionResult<IEnumerable<BuffaloTypeResponseModel>>> search(string breedTypeCode)
         {
-
-            DataTable buffaloTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQueryByBreedTypeCode(), null, populateSqlParameters(breedTypeCode));
-
-            if (buffaloTypeRecord.Rows.Count == 0)
+            var buffaloTypeRecords = await _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag && buffaloType.BreedTypeCode.Equals(breedTypeCode)).ToListAsync();
+            if (buffaloTypeRecords.Count == 0)
             {
                 return Conflict("No records found!");
             }
-
-            var buffaloTypeModels = convertDataRowListToBuffaloTypelist(buffaloTypeRecord.AsEnumerable().ToList());
-            var buffaloTypeResponseModel = convertBuffaloTypeListToResponseModelList(buffaloTypeModels);
+            var buffaloTypeResponseModel = convertBuffaloTypeListToResponseModelList(buffaloTypeRecords);
             return buffaloTypeResponseModel;
         }
 
@@ -67,15 +77,13 @@ namespace API_PCC.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BuffaloTypeResponseModel>>> view()
         {
-            DataTable buffaloTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQueryAll(), null, new SqlParameter[] { });
-
-            if (buffaloTypeRecord.Rows.Count == 0)
+            var buffaloTypeRecords = await _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag).ToListAsync();
+            if (buffaloTypeRecords.Count == 0)
             {
                 return Conflict("No records found!");
             }
 
-            var buffaloTypeModels = convertDataRowListToBuffaloTypelist(buffaloTypeRecord.AsEnumerable().ToList());
-            var buffaloTypeResponseModel = convertBuffaloTypeListToResponseModelList(buffaloTypeModels);
+            var buffaloTypeResponseModel = convertBuffaloTypeListToResponseModelList(buffaloTypeRecords);
             return buffaloTypeResponseModel;
         }
 
@@ -84,27 +92,26 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, BuffaloTypeUpdateModel buffaloTypeUpdateModel)
         {
-            DataTable farmerAffiliationRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQueryById(), null, populateSqlParameters(id));
-
-            if (farmerAffiliationRecord.Rows.Count == 0)
+            var buffaloTypeRecord =  _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag && buffaloType.Id.Equals(id)).FirstOrDefault();
+            if (buffaloTypeRecord == null)
             {
                 return Conflict("No records matched!");
             }
 
-            DataTable buffaloTypeDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeDuplicateCheckUpdateQuery(), null, populateSqlParameters(id, buffaloTypeUpdateModel));
-
+            var buffaloTypeDuplicateCheck = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag && 
+                                                                                        !buffaloType.Id.Equals(id) && 
+                                                                                        buffaloType.BreedTypeCode.Equals(buffaloTypeUpdateModel.BreedTypeCode) &&
+                                                                                        buffaloType.BreedTypeDesc.Equals(buffaloTypeUpdateModel.BreedTypeDesc)).FirstOrDefault();
             // check for duplication
-            if (buffaloTypeDuplicateCheck.Rows.Count > 0)
+            if (buffaloTypeDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");
             }
 
-            var buffaloTypeModel = convertDataRowToBuffaloType(farmerAffiliationRecord.Rows[0]);
-
             try
             {
-                populateBuffaloType(buffaloTypeModel, buffaloTypeUpdateModel);
-                _context.Entry(buffaloTypeModel).State = EntityState.Modified;
+                populateBuffaloType(buffaloTypeRecord, buffaloTypeUpdateModel);
+                _context.Entry(buffaloTypeRecord).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
 
                 return Ok("Update Successful!");
@@ -121,10 +128,11 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<HBuffaloType>> save(BuffaloTypeRegistrationModel buffaloTypeRegistrationModel)
         {
-            DataTable buffaloTypeDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeDuplicateCheckSaveQuery(), null, populateSqlParameters(buffaloTypeRegistrationModel));
-
+            var buffaloTypeDuplicateCheck = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag &&
+                                                                                         buffaloType.BreedTypeCode.Equals(buffaloTypeRegistrationModel.BreedTypeCode) &&
+                                                                                         buffaloType.BreedTypeDesc.Equals(buffaloTypeRegistrationModel.BreedTypeDesc)).FirstOrDefault();
             // check for duplication
-            if (buffaloTypeDuplicateCheck.Rows.Count > 0)
+            if (buffaloTypeDuplicateCheck != null)
             {
                 return Conflict("Entity already exists");
             }
@@ -163,14 +171,13 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> delete(DeletionModel deletionModel)
         {
-            DataTable buffaloTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeSearchQueryById(), null, populateSqlParameters(deletionModel.id));
+            var buffaloTypeModel = _context.HBuffaloTypes.Where(buffaloType => !buffaloType.DeleteFlag && 
+                                                                                 buffaloType.Id.Equals(deletionModel.id)).FirstOrDefault();
 
-            if (buffaloTypeRecord.Rows.Count == 0)
+            if (buffaloTypeModel == null)
             {
                 return Conflict("No records matched!");
             }
-
-            var buffaloTypeModel = convertDataRowToBuffaloType(buffaloTypeRecord.Rows[0]);
 
             try
             {
@@ -194,14 +201,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
         {
-            DataTable buffaloTypeRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildBuffaloTypeDeletedSearchQueryById(), null, populateSqlParameters(restorationModel.id));
-
-            if (buffaloTypeRecord.Rows.Count == 0)
+            var buffaloTypeModel = _context.HBuffaloTypes.Where(buffaloType => buffaloType.DeleteFlag &&
+                                                                               buffaloType.Id.Equals(restorationModel.id)).FirstOrDefault();
+            if (buffaloTypeModel == null)
             {
                 return Conflict("No deleted records matched!");
             }
-
-            var buffaloTypeModel = convertDataRowToBuffaloType(buffaloTypeRecord.Rows[0]);
 
             try
             {
@@ -222,118 +227,18 @@ namespace API_PCC.Controllers
             }
         }
 
-
-        private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchParam != null && searchFilter.searchParam != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchParam ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(string breedTypeCode)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeCode",
-                Value = breedTypeCode ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id, BuffaloTypeUpdateModel buffaloTypeUpdateModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeCode",
-                Value = buffaloTypeUpdateModel.BreedTypeCode,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeDesc",
-                Value = buffaloTypeUpdateModel.BreedTypeDesc,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(BuffaloTypeRegistrationModel buffaloTypeRegistrationModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeCode",
-                Value = buffaloTypeRegistrationModel.BreedTypeCode,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "BreedTypeDesc",
-                Value = buffaloTypeRegistrationModel.BreedTypeDesc,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private List<BuffaloTypePagedModel> buildBuffaloTypesPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
+        private List<BuffaloTypePagedModel> buildBuffaloTypesPagedModel(CommonSearchFilterModel searchFilter, List<HBuffaloType> buffaloTypeList)
         {
 
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
             var items = (dynamic)null;
 
-            int totalItems = dt.Rows.Count;
+            int totalItems = buffaloTypeList.Count;
             int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
+            items = buffaloTypeList.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
-            var buffaloTypeModels = convertDataRowListToBuffaloTypelist(items);
-            List<BuffaloTypeResponseModel> buffaloTypeResponseModels = convertBuffaloTypeListToResponseModelList(buffaloTypeModels);
+            List<BuffaloTypeResponseModel> buffaloTypeResponseModels = convertBuffaloTypeListToResponseModelList(buffaloTypeList);
 
             var result = new List<BuffaloTypePagedModel>();
             var item = new BuffaloTypePagedModel();

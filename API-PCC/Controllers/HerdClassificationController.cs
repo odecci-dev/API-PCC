@@ -19,7 +19,6 @@ namespace API_PCC.Controllers
     {
 
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public HerdClassificationController(PCC_DEVContext context)
         {
@@ -32,8 +31,10 @@ namespace API_PCC.Controllers
 
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQuery(searchFilter), null, populateSqlParameters(searchFilter));
-                var result = buildHerdClassificationPagedModel(searchFilter, queryResult);
+                var herdClassificationList = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                       (herdClassification.HerdClassCode.Contains(searchFilter.searchParam) ||
+                                                                                                        herdClassification.HerdClassDesc.Contains(searchFilter.searchParam))).ToList();
+                var result = buildHerdClassificationPagedModel(searchFilter, herdClassificationList);
                 return Ok(result);
             }
 
@@ -49,13 +50,13 @@ namespace API_PCC.Controllers
         public async Task<ActionResult<IEnumerable<HerdClassificationResponseModel>>> search(string herdClassCode)
         {
             try { 
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryByHerdClassCode(), null, populateSqlParameters(herdClassCode));
-                if (queryResult.Rows.Count == 0)
+                var herdClassificationList = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                        herdClassification.HerdClassCode.Equals(herdClassCode)).ToList();
+                if (herdClassificationList == null )
                 {
                     return Conflict("No records found!");
                 }
-                var herdClassificationModels = convertDataRowToHerdClassificationList(queryResult.AsEnumerable().ToList());
-                List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassificationModels);
+                List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassificationList);
 
                 return Ok(herdClassificationResponseModels);
             }
@@ -71,13 +72,12 @@ namespace API_PCC.Controllers
         {
             try
             {
-                DataTable queryResult = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryAll(), null, new SqlParameter[] { });
-                if (queryResult.Rows.Count == 0)
+                var herdClassificationList = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag).ToList();
+                if (herdClassificationList == null)
                 {
                     return Conflict("No records found!");
                 }
-                var herdClassificationModels = convertDataRowToHerdClassificationList(queryResult.AsEnumerable().ToList());
-                List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassificationModels);
+                List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassificationList);
 
                 return Ok(herdClassificationResponseModels);
             }
@@ -92,22 +92,23 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, HerdClassificationUpdateModel herdClassificationUpdateModel)
         {
-            DataTable herdClassificationRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryById(), null, populateSqlParameters(id));
 
-            if (herdClassificationRecord.Rows.Count == 0)
+            var herdClassificationModel = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag && herdClassification.Id.Equals(id)).FirstOrDefault();
+            if (herdClassificationModel == null)
             {
                 return Conflict("No records matched!");
             }
 
-            DataTable herdClassificationDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationDuplicateCheckUpdateQuery(), null, populateSqlParameters(id, herdClassificationUpdateModel));
-
+            var herdClassificationDuplicateCheck = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                              herdClassification.Id.Equals(id) &&
+                                                                                                              herdClassification.HerdClassCode.Equals(herdClassificationUpdateModel.HerdClassCode) &&
+                                                                                                              herdClassification.HerdClassDesc.Equals(herdClassificationUpdateModel.HerdClassDesc)).FirstOrDefault();
             // check for duplication
-            if (herdClassificationDuplicateCheck.Rows.Count > 0)
+            if (herdClassificationDuplicateCheck == null)
             {
                 return Conflict("Entity already exists");
             }
 
-            var herdClassificationModel = convertDataRowToHerdClassification(herdClassificationRecord.Rows[0]);
 
             try
             {
@@ -129,43 +130,40 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<ActionResult<HHerdClassification>> save(HerdClassificationRegistrationModel herdClassificationRegistrationModel)
         {
-
-          DataTable hasDuplicateOnSave = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationDuplicateCheckSaveQuery(), null, populateSqlParameters(herdClassificationRegistrationModel));
-
+            var herdClassificationDuplicateCheck = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag &&
+                                                                                                              herdClassification.HerdClassCode.Equals(herdClassificationRegistrationModel.HerdClassCode) &&
+                                                                                                              herdClassification.HerdClassDesc.Equals(herdClassificationRegistrationModel.HerdClassDesc)).FirstOrDefault();
             // check for duplication
-          if (hasDuplicateOnSave.Rows.Count > 0)
-          {
-              return Conflict("Entity already exists");
-          }
-          try
-          {
+            if (herdClassificationDuplicateCheck == null)
+            {
+                return Conflict("Entity already exists");
+            }
+            try
+            {
                 var herdClassification = buildHerdClassificationRegistrationModel(herdClassificationRegistrationModel);
                 _context.HHerdClassifications.Add(herdClassification);
                 await _context.SaveChangesAsync();
                 return Ok("Herd successfully registered!");
             }
-          catch (Exception ex) 
-          { 
-                
+            catch (Exception ex)
+            {
+
                 return Problem(ex.GetBaseException().ToString());
-          }
+            }
         }
 
         // POST: HerdClassification/delete/5
         [HttpPost]
         public async Task<IActionResult> delete(DeletionModel deletionModel)
         {
-            DataTable herdClassificationRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationSearchQueryById(), null, populateSqlParameters(deletionModel.id));
-
-            if (herdClassificationRecord.Rows.Count == 0)
+            var herdClassificationModel = _context.HHerdClassifications.Where(herdClassification => !herdClassification.DeleteFlag && herdClassification.Id.Equals(deletionModel.id)).FirstOrDefault();
+            if (herdClassificationModel == null)
             {
                 return Conflict("No records found!");
             }
 
-            var herdClassificationModel = convertDataRowToHerdClassification(herdClassificationRecord.Rows[0]);
-            DataTable herdRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdSelectQueryByHerdClassDesc(), null, populateSqlParameters(herdClassificationModel.HerdClassCode));
-
-            if (herdRecord.Rows.Count > 0)
+            var herdRecord = _context.HBuffHerds.Where(herd => !herd.DeleteFlag && herd.HerdClassDesc.Equals(herdClassificationModel.HerdClassDesc)).FirstOrDefault();
+            if (herdRecord == null)
             {
                 return Conflict("Used by other table!");
             }
@@ -193,16 +191,11 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
         {
-
-
-            DataTable herdClassificationRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildHerdClassificationDeletedSearchQueryById(), null, populateSqlParameters(restorationModel.id));
-
-            if (herdClassificationRecord.Rows.Count == 0)
+            var herdClassificationModel = _context.HHerdClassifications.Where(herdClassification => herdClassification.DeleteFlag && herdClassification.Id.Equals(restorationModel.id)).FirstOrDefault();
+            if (herdClassificationModel == null)
             {
                 return Conflict("No deleted records found!");
             }
-
-            var herdClassificationModel = convertDataRowToHerdClassification(herdClassificationRecord.Rows[0]);
 
             try
             {
@@ -223,119 +216,17 @@ namespace API_PCC.Controllers
             }
         }
 
-        private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchParam != null && searchFilter.searchParam != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchParam ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-            
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(string herdClassDesc)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassDesc",
-                Value = herdClassDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id, HerdClassificationUpdateModel herdClassificationUpdateModel)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.Int,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassCode",
-                Value = herdClassificationUpdateModel.HerdClassCode,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassDesc",
-                Value = herdClassificationUpdateModel.HerdClassDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(HerdClassificationRegistrationModel herdClassificationRegistrationModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassCode",
-                Value = herdClassificationRegistrationModel.HerdClassCode,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "HerdClassDesc",
-                Value = herdClassificationRegistrationModel.HerdClassDesc ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-
-            return sqlParameters.ToArray();
-        }
-
-        private List<HerdClassificationPagedModel> buildHerdClassificationPagedModel(CommonSearchFilterModel searchFilter, DataTable dt)
+        private List<HerdClassificationPagedModel> buildHerdClassificationPagedModel(CommonSearchFilterModel searchFilter, List<HHerdClassification> herdClassifications)
         {
             int pagesize = searchFilter.pageSize == 0 ? 10 : searchFilter.pageSize;
             int page = searchFilter.page == 0 ? 1 : searchFilter.page;
             var items = (dynamic)null;
 
-            int totalItems = dt.Rows.Count;
+            int totalItems = herdClassifications.Count;
             int totalPages = (int)Math.Ceiling((double)totalItems / pagesize);
-            items = dt.AsEnumerable().Skip((page - 1) * pagesize).Take(pagesize).ToList();
+            items = herdClassifications.Skip((page - 1) * pagesize).Take(pagesize).ToList();
 
-
-            var herdClassificationModels = convertDataRowToHerdClassificationList(items);
-            List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassificationModels);
+            List<HerdClassificationResponseModel> herdClassificationResponseModels = convertHerdClassificationToResponseModelList(herdClassifications);
 
             var result = new List<HerdClassificationPagedModel>();
             var item = new HerdClassificationPagedModel();

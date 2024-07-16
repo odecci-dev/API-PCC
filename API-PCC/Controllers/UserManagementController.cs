@@ -23,7 +23,6 @@ namespace API_PCC.Controllers
     public class UserManagementController : ControllerBase
     {
         private readonly PCC_DEVContext _context;
-        DbManager db = new DbManager();
 
         public UserManagementController(PCC_DEVContext context)
         {
@@ -38,6 +37,9 @@ namespace API_PCC.Controllers
                 var filter = new Dictionary<string, object>();
                 filter.Add("searchParam", searchFilter.searchParam);
                 List<TblUsersModel> userList = await buildUserManagementSearchQuery(filter).ToListAsync();
+
+
+
                 var result = buildUserPagedModel(searchFilter, userList);
                 return Ok(result);
             }
@@ -96,7 +98,6 @@ namespace API_PCC.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> update(int id, UserUpdateModel userUpdateModel)
         {
-            //DataTable userRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQueryById(), null, populateSqlParameters(id));
             var filter = new Dictionary<string, object>();
             filter.Add("Id", id);
             var userModel = await buildUserManagementSearchQuery(filter).FirstOrDefaultAsync();
@@ -106,10 +107,18 @@ namespace API_PCC.Controllers
                 return Conflict("No records matched!");
             }
 
-            DataTable userDuplicateCheck = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserDuplicateCheckUpdateQuery(), null, populateSqlParameters(id, userUpdateModel));
-
+            var userDuplicateCheck = _context.TblUsersModels.Where(user => !user.DeleteFlag &&
+                                                              !user.Id.Equals(id) &&
+                                                              (user.Username.Equals(userUpdateModel.Username) ||
+                                                              (user.Fullname.Equals(userUpdateModel.Fullname) &&
+                                                               user.Fname.Equals(userUpdateModel.Fname) && 
+                                                               user.Lname.Equals(userUpdateModel.Lname) &&
+                                                               user.Mname.Equals(userUpdateModel.Mname) &&
+                                                               user.Email.Equals(userUpdateModel.Email) ) 
+                                                              )
+                                                              ).FirstOrDefault();
             // check for duplication
-            if (userDuplicateCheck.Rows.Count > 0)
+            if (userDuplicateCheck == null)
             {
                 return Conflict("Entity already exists");
             }
@@ -198,14 +207,12 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> delete(DeletionModel deletionModel)
         {
-            DataTable userRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserSearchQueryById(), null, populateSqlParameters(deletionModel.id));
-
-            if (userRecord.Rows.Count == 0)
+            var userModel = _context.TblUsersModels.Where(user => !user.DeleteFlag &&
+                                                                    user.Id.Equals(deletionModel.id)).FirstOrDefault();
+            if (userModel == null)
             {
                 return Conflict("No records found!");
             }
-
-            var userModel = convertDataRowToUser(userRecord.Rows[0]);
 
             try
             {
@@ -230,16 +237,11 @@ namespace API_PCC.Controllers
         [HttpPost]
         public async Task<IActionResult> restore(RestorationModel restorationModel)
         {
-
-
-            DataTable userRecord = db.SelectDb_WithParamAndSorting(QueryBuilder.buildUserDeletedSearchQueryById(), null, populateSqlParameters(restorationModel.id));
-
-            if (userRecord.Rows.Count == 0)
+            var userModel = _context.TblUsersModels.Where(user => user.DeleteFlag && user.Id.Equals(restorationModel.id)).FirstOrDefault();
+            if (userModel == null)
             {
                 return Conflict("No deleted records found!");
             }
-
-            var userModel = convertDataRowToUser(userRecord.Rows[0]);
 
             try
             {
@@ -258,103 +260,6 @@ namespace API_PCC.Controllers
 
                 return Problem(ex.GetBaseException().ToString());
             }
-        }
-
-
-        private SqlParameter[] populateSqlParameters(CommonSearchFilterModel searchFilter)
-        {
-
-            var sqlParameters = new List<SqlParameter>();
-
-            if (searchFilter.searchParam != null && searchFilter.searchParam != "")
-            {
-                sqlParameters.Add(new SqlParameter
-                {
-                    ParameterName = "SearchParam",
-                    Value = searchFilter.searchParam ?? Convert.DBNull,
-                    SqlDbType = System.Data.SqlDbType.VarChar,
-                });
-            }
-
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(int id)
-        {
-            var sqlParameters = new List<SqlParameter>();
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-            return sqlParameters.ToArray();
-        }
-
-        private SqlParameter[] populateSqlParameters(string username)
-        {
-            var sqlParameters = new List<SqlParameter>();
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Username",
-                Value = username ?? Convert.DBNull,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-            return sqlParameters.ToArray();
-        }
-        private SqlParameter[] populateSqlParameters(int id, UserUpdateModel userUpdateModel)
-        {
-            var sqlParameters = new List<SqlParameter>();
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Id",
-                Value = id,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Username",
-                Value = userUpdateModel.Username,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Fullname",
-                Value = userUpdateModel.Fullname,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Fname",
-                Value = userUpdateModel.Fname,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Lname",
-                Value = userUpdateModel.Lname,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Mname",
-                Value = userUpdateModel.Mname,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            sqlParameters.Add(new SqlParameter
-            {
-                ParameterName = "Email",
-                Value = userUpdateModel.Email,
-                SqlDbType = System.Data.SqlDbType.VarChar,
-            });
-
-            return sqlParameters.ToArray();
         }
 
         private List<UserPagedModel> buildUserPagedModel(CommonSearchFilterModel searchFilter, List<TblUsersModel> userList)
@@ -387,24 +292,6 @@ namespace API_PCC.Controllers
             result.Add(item);
 
             return result;
-        }
-
-        private List<TblUsersModel> convertDataRowToUserList(List<DataRow> dataRowList)
-        {
-            var userList = new List<TblUsersModel>();
-
-            foreach (DataRow dataRow in dataRowList)
-            {
-                var user = DataRowToObject.ToObject<TblUsersModel>(dataRow);
-                userList.Add(user);
-            }
-
-            return userList;
-        }
-
-        private TblUsersModel convertDataRowToUser(DataRow dataRow)
-        {
-            return DataRowToObject.ToObject<TblUsersModel>(dataRow);
         }
 
         private List<UserResponseModel> convertUserListToResponseModelList(List<TblUsersModel> userList)
